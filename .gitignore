@@ -1,0 +1,105 @@
+﻿# =========================
+# 后端 - Java / Spring Boot / Maven
+# =========================
+*.class
+*.log
+*.ctxt
+.mtj.tmp/
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+hs_err_pid*
+replay_pid*
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.swp
+*.swo
+.settings/
+.project
+.classpath
+.factorypath
+
+# =========================
+# 前端 - Node / Vue / Vite
+# =========================
+node_modules/
+.pnp
+.pnp.js
+dist/
+dist-ssr/
+*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# =========================
+# Android
+# =========================
+*.iml
+.gradle/
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+app/build/
+
+# =========================
+# 系统文件
+# =========================
+Thumbs.db
+.DS_Store
+$RECYCLE.BIN/
+*.tmp
+*.bak
+*.swp
+
+# =========================
+# 项目本地配置
+# =========================
+*.env
+*.env.local
+*.env.development.local
+*.env.production.local
+*.env.*.local

@@ -1,0 +1,131 @@
+﻿server:
+  port: 8080
+  servlet:
+    context-path: /
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  application:
+    name: fitpulse-backend
+  profiles:
+    active: dev
+
+  # ============ 数据源 ============
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/fitpulse_db?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 600000
+      pool-name: FitPulseHikariCP
+
+  # ============ Redis ============
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password:
+      database: 0
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  # ============ 文件上传 ============
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+  # ============ Jackson ============
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    default-property-inclusion: non_null
+    deserialization:
+      fail-on-unknown-properties: false
+
+  # ============ Spring AI (DeepSeek OpenAI 兼容接口) ============
+  ai:
+    openai:
+      api-key: 
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model: deepseek-chat
+          temperature: 0.7
+          max-tokens: 4096
+
+# ============ MyBatis-Plus ============
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.fitpulse.app.*.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl   # 开发期打印SQL，上线换NO_LOGGING
+  global-config:
+    db-config:
+      id-type: ASSIGN_ID          # 雪花算法
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# ============ 自定义 JWT 配置 ============
+fitpulse:
+  jwt:
+    secret: "FitPulse@2026!SecretKey_MakeItLongEnough_Over256Bits_ForHS256"
+    access-expire-minutes: 10080   # 7天
+    refresh-expire-minutes: 43200  # 30天
+    header: Authorization
+    prefix: "Bearer "
+
+  # ============ MinIO ============
+  minio:
+    endpoint: http://127.0.0.1:9000
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket: fitpulse-assets
+    # 访问前缀：如果 MinIO 反代或 CDN，填外部地址
+    public-base-url: http://127.0.0.1:9000/fitpulse-assets
+
+  # ============ AI 提示词模板 ============
+  ai:
+    plan-prompt-template: |
+      你是一位专业健身教练。请为用户生成个性化训练计划。
+      用户目标：{goal}（1减脂 2增肌 3塑形 4力量）
+      可用器械：{equipment}
+      每周训练天数：{daysPerWeek}
+      训练经验：{level}（入门/初级/中级/高级）
+      可用时间：{minutesPerDay} 分钟/次
+
+      输出 JSON 格式，不要任何 Markdown：
+      {
+        "planName": "字符串",
+        "daysPerWeek": 数字,
+        "days": [
+          {
+            "dayNo": 1,
+            "focus": "部位",
+            "exercises": [
+              {"name": "动作名", "sets": 3, "reps": "8-12", "restSec": 90}
+            ]
+          }
+        ]
+      }
+    diet-prompt-template: |
+      你是营养师。用户今日摄入：{todayMeals}，总热量 {totalKcal}kcal，
+      目标：{goal}，每日目标热量 {targetKcal}kcal。
+      用 3 句话给出评价和改进建议。
+
+logging:
+  level:
+    com.fitpulse.app: debug
+    org.springframework.security: info
