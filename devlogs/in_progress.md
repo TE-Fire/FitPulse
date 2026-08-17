@@ -11,6 +11,7 @@
 2. pom.xml 依赖审查（修复空 version 标签 + 补齐插件显式版本）
 3. Java 代码局部变量 `var` → 显式类型
 4. 建立工作记录机制：`D:\FitPulse\devlogs\in_progress.md`（会话结束时根据历史重命名）
+5. 清空后端 Java 源码，等待用户按模块指示逐步重建
 
 ---
 
@@ -79,3 +80,20 @@
 - 目录：`D:\FitPulse\devlogs\`（用户选择方案 C）
 - 进行中临时文件：`in_progress.md`
 - 重命名触发：用户明确说"结束今天会话"时，结合整段会话历史概括后重命名为 `yyyyMMdd_<概括>.md`
+
+---
+
+## 6. 清空后端 Java 源码（等待按模块指示逐步重建）
+- 删除范围：`fitness-backend/src/main/java/**/*.java`（共 **22** 个 .java 文件）
+- 严格保留以下不删：
+  - ✅ pom.xml（JDK21 + 多仓库 + 依赖版本已修复）
+  - ✅ resources/**（application.yml、logback-spring.xml、sql/schema.sql）
+  - ✅ 包目录结构（不删除空目录，便于按模块重建）
+- 删除清单（按模块分组）：
+  - common 层：Result / ResultCode / PageResult / BusinessException / GlobalExceptionHandler
+    + SecurityConfig / CorsConfig / MyBatisPlusConfig / RedisConfig / MinioConfig / AiPromptProperties  共 12
+  - auth/jwt：JwtProperties / JwtTokenProvider / JwtAuthFilter / CurrentUser  共 4
+  - FitnessApplication 启动类：1
+  - 业务 controller/service：DashboardController、AiController+AiService、FileController+FileStorageService、UserController  共 5
+- 校验：`Remaining .java files: 0` ✓
+- 下一步：等待用户给出具体模块指示后逐个写入
