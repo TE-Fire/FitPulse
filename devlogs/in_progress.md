@@ -572,7 +572,7 @@ ERROR in ch.qos.logback.classic.PatternLayout("null") - Empty or null pattern.
 | 分包 logger | 无 | `auth=DEBUG`、`mapper=DEBUG`、`spring-security=INFO`、`jjwt=WARN`（additivity=false 避免重复打印） |
 | 环境隔离 | 无 | `<springProfile name="dev">` 业务包=DEBUG；非 dev=INFO；两份独立 root 注册 |
 | 热加载 | 无 | `scan="true" scanPeriod="30s"` 运行时可改配置不用重启 |
-| 彩色 | 无 | 控制台 `%clr(%-5level)`，Spring Boot 原生支持 |
+| 彩色 | 无 | 控制台 `%clr(%-5level)`，Spring Boot 原生支持 → **已回退**：`%clr` 为 Spring Boot 自定义 converter，在本环境初始化时出现 `There is no conversion class registered for composite conversion word [clr]` 导致启动直接失败；已改为纯 logback 原生 `%-5level`，其他结构完整保留（分 profile/分包 logger/ FILE+ERROR rolling 全不动） |
 
 ### 23.2 关键文件
 - 配置：[logback-spring.xml](file:///d:/FitPulse/fitness-backend/src/main/resources/logback-spring.xml)

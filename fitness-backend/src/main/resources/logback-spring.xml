@@ -15,9 +15,9 @@
     <property name="LOG_MAX_HISTORY" value="30"/>
     <property name="LOG_MAX_FILE_SIZE" value="50MB"/>
 
-    <!-- 控制台：带级别彩色 -->
+    <!-- 控制台：纯原生 pattern，避免 %clr 的 converter 注册顺序问题（Spring Boot 自定义） -->
     <property name="CONSOLE_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %clr(%-5level) %logger{50} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"/>
     <!-- 文件：不带 ANSI 彩色，落地干净 -->
     <property name="FILE_PATTERN"
               value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"/>
