@@ -424,3 +424,35 @@ com.fitpulse.app/
 
 **Auth 模块 5 接口已全部可编译**：注册 → 发送验证码 → 登录（密码/验证码）→ 刷新 → 登出。
 **运行前置条件**：MySQL 建 user 表、Redis 在线、（可选）邮件配置凭据填 application.yml。后续可本地启动后用 ApiFox 按文档链路验证。
+
+---
+
+## 19. AuthService 按「接口 + impl」分层（面向接口编程）
+
+### 19.1 变更背景
+P1-4 阶段 AuthService 直接写成具体类（`@Service` 注解在类上），不符合项目规范：
+- Service 层目录下应只放**接口**，仅定义对外暴露的方法签名（契约）
+- `service/impl/` 目录下放**实现类**，加 `@Service` 作为 Spring Bean
+- Controller 只依赖**接口**（按类型自动装配实现类），解耦后可随时切换实现 / Mock
+
+### 19.2 变更明细
+| 原位置（单一具体类） | 新结构（接口+实现） |
+|---|---|
+| `auth/service/AuthService.java` 具体类 | 重写为 `interface AuthService`（5 抽象方法：register/login/sendCode/refresh/logout） |
+| （无） | 新建 `auth/service/impl/AuthServiceImpl.java`<br>• `@Service @RequiredArgsConstructor implements AuthService`<br>• 所有公共方法加 `@Override`<br>• 私有辅助方法（resolveUniqueUsername、verifyPassword 等）保留在实现类中 |
+| `AuthController` 中 `private final AuthService authService` | **无需修改代码**：字段类型现在指向接口，Spring IoC 按接口类型自动匹配唯一 Bean `AuthServiceImpl` |
+
+### 19.3 约定的分层模板（后续所有业务模块都遵循）
+```
+{module}/
+├── controller/           ← 依赖 {Module}Service（接口类型）
+├── service/
+│   ├── {Module}Service.java    ← 接口，方法签名契约
+│   └── impl/
+│       └── {Module}ServiceImpl.java  ← @Service implements，具体实现
+├── dto/req/ & dto/vo/    ← 本模块专属 DTO
+└── ...其他子包
+```
+
+### 19.4 编译验证
+`mvn compile` BUILD SUCCESS（JDK 21 / 31 个源文件 / 14.8s）
