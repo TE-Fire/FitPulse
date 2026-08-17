@@ -742,3 +742,45 @@ url: jdbc:mysql://...fitpulse_db?useUnicode=true&characterEncoding=UTF-8&connect
 ```
 用户只要在 Apifox 里把 send-code 的**后置操作**设置为"提取 `data.code` 到环境变量 REGISTER_CODE / LOGIN_CODE"，然后在 register/login 请求体中 `"code": "{{REGISTER_CODE}}"`，就能完成**自动化闭环**，不需要手填。
 
+---
+
+## 28. 最终确认：apifox.json 的 `/auth/register` 请求体"自动生成"为何只有 email+password（缺少 code）
+
+### 28.1 现场复现（用户提供的 Apifox 截图）
+Apifox 打开 `POST /api/v1/auth/register` → Body → JSON → 点"自动生成"，生成结果：
+```json
+{
+  "email": "3037749727@qq.com",
+  "password": "Fire@2026"
+  // ⚠️ 没有 code 字段
+}
+```
+用户据此怀疑"apifox.json 的注册接口没加 code 字段"。
+
+### 28.2 真正原因（两层都要具备，缺一 Apifox 就可能漏）
+Apifox / Postman / Swagger UI 在"按 schema 自动生成请求体"时，规则通常是：
+1. **优先使用 `path.requestBody.content.*.example`（或 examples 里选中的那一份）**—— 这是每个接口**专属的 requestBody example**；
+2. 只有当 path 下没有内联 example 时，才会 fallback 到 `components.schemas.Xxx.example`；
+3. 有些版本的 Apifox 对"只写 `$ref`、没写内联 example"的路径在"自动生成"时**会走更保守的 fallback 逻辑**（可能只识别部分字段，或客户端缓存了旧 schema 导致结果不一致）。
+
+上一轮改的只是 `components.schemas.RegisterReq.required/properties/example`，**没有在 `/auth/register` 这个 path 的 requestBody 里写内联 example**，所以才会出现"我看 schema 有 code，但 Apifox 自动生成没带 code"的跨层差异。用户的判断（"我看到的自动生成确实没带"）是正确的，我之前的判断（"schema 里有就够了"）**不严谨**。
+
+### 28.3 修复（在 path 级别直接写内联 example，不依赖 $ref 解析）
+1. **`/auth/register` 路径**（注册必填 code）：在 `requestBody.content.application/json` 里新增内联 `example`：
+   ```json
+   {"email":"fire_dev@qq.com","password":"Fire@2026","code":"482917"}
+   ```
+2. **`/auth/login` 路径**（type=1/2 两种模式）：用 OpenAPI 3.0 的 `examples`（带 key）而非 `example`，给出两份可切换模板：
+   - `passwordLogin`：type=1，只带 password，不带 code
+   - `codeLogin`：type=2，只带 code：`{"email":"fire_dev@qq.com","type":2,"code":"952764"}`
+3. **JSON 语法校验通过**：`node -e "JSON.parse(...)"` ✅ JSON OK。
+
+### 28.4 代码引用
+- 修复片段位置：[接口文档_apifox.json §/auth/register requestBody.example](file:///d:/FitPulse/docs/%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3_apifox.json#L2898-L2912) / [§/auth/login requestBody.examples](file:///d:/FitPulse/docs/%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3_apifox.json#L2940-L2967)
+- schema 层 RegisterReq 的 code 声明（保留双保险）：[接口文档_apifox.json#L1081-L1110](file:///d:/FitPulse/docs/%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3_apifox.json#L1081-L1110)
+
+### 28.5 用户侧操作（必做，否则仍然看到老结果）
+> 不是"代码改完 Apifox 自动就刷新了"，Apifox 默认不会主动 watch 文件变更。
+> 必须手动执行：**Apifox 项目主页 → 导入 → 选择 OpenAPI 3.0 (YAML/JSON) → 选 `docs/接口文档_apifox.json` → 覆盖导入 / 更新已有接口**。
+> 导入完成后重新打开 `POST /auth/register`，Body → "自动生成"就一定是 email+password+code 三字段完整 JSON。
+

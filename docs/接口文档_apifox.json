@@ -2901,6 +2901,11 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/RegisterReq"
+              },
+              "example": {
+                "email": "fire_dev@qq.com",
+                "password": "Fire@2026",
+                "code": "482917"
               }
             }
           }
@@ -2938,6 +2943,24 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/LoginReq"
+              },
+              "examples": {
+                "passwordLogin": {
+                  "summary": "密码登录（type=1，不需要code）",
+                  "value": {
+                    "email": "fire_dev@qq.com",
+                    "type": 1,
+                    "password": "Fire@2026"
+                  }
+                },
+                "codeLogin": {
+                  "summary": "验证码登录（type=2，需要先发 login/send-code 拿 code）",
+                  "value": {
+                    "email": "fire_dev@qq.com",
+                    "type": 2,
+                    "code": "952764"
+                  }
+                }
               }
             }
           }
