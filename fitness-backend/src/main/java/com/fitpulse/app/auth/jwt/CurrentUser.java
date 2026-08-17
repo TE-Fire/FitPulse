@@ -1,18 +1,22 @@
 ﻿package com.fitpulse.app.auth.jwt;
 
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 /**
  * 工具类：从 SecurityContext 获取当前登录用户
  */
 public class CurrentUser {
     public static JwtAuthFilter.LoginUser get() {
-        var ctx = org.springframework.security.core.context.SecurityContextHolder.getContext();
+        SecurityContext ctx = SecurityContextHolder.getContext();
         if (ctx == null || ctx.getAuthentication() == null) return null;
-        var p = ctx.getAuthentication().getPrincipal();
+        Object p = ctx.getAuthentication().getPrincipal();
         if (p instanceof JwtAuthFilter.LoginUser u) return u;
         return null;
     }
     public static Long userId() {
-        var u = get(); return u == null ? null : u.userId();
+        JwtAuthFilter.LoginUser u = get();
+        return u == null ? null : u.userId();
     }
     public static Long requireUserId() {
         Long id = userId();

@@ -3,6 +3,7 @@
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fitpulse.app.common.result.Result;
 import com.fitpulse.app.common.result.ResultCode;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,6 +16,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+
 import java.io.IOException;
 import java.util.Collections;
 
@@ -33,14 +35,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String auth = req.getHeader(props.getHeader());
         if (auth != null && auth.startsWith(props.getPrefix())) {
             String token = auth.substring(props.getPrefix().length());
-            var claims = jwt.parse(token);
+            Claims claims = jwt.parse(token);
             if (claims == null) { writeUnauthorized(resp, "Token无效"); return; }
             Long userId;
             try { userId = Long.valueOf(claims.getSubject()); }
             catch (Exception e) { writeUnauthorized(resp, "Token无效"); return; }
             if (!jwt.isTokenValidInRedis(userId, token)) { writeUnauthorized(resp, "登录已过期"); return; }
             String username = claims.get("username", String.class);
-            var authToken = new UsernamePasswordAuthenticationToken(
+            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                     new LoginUser(userId, username), null,
                     Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
             );
