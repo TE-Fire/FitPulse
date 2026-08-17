@@ -111,3 +111,48 @@
 ---
 
 > 会话未结束，等待用户按模块逐一重建后端 Java 代码
+---
+
+## 8. Auth 接口修订（QQ邮箱注册 + 合并登录 + 验证码 + 鉴权策略调整）
+
+### 8.1 用户需求
+1. 注册使用 QQ 邮箱（@qq.com），不再要求 username（后端取邮箱前缀自动生成）
+2. 登录合并为单一接口，通过 	ype 字段区分：1=密码登录 2=验证码登录
+3. 验证码通过日志打印 + QQ 邮箱 SMTP 发送
+4. 测试阶段不强制鉴权凭证（ApiFox JSON 去掉全局 security，改为单接口单独标注）
+
+### 8.2 auth 接口最终 5 条（原 4 条 → 5 条）
+
+| # | 方法 | 路径 | 鉴权 | 请求体 | 响应 data |
+|---|---|---|---|---|---|
+| 1 | POST | /auth/register | 否 | {email(@qq.com), password} | null |
+| 2 | POST | /auth/login | 否 | {email, type(1|2), password?, code?} | {accessToken, refreshToken, userId, username} |
+| 3 | POST | /auth/login/send-code | 否 | {email} | null（6位码5min，日志+SMTP） |
+| 4 | POST | /auth/refresh | 否 | {refreshToken} | 同 login（旋转失效） |
+| 5 | POST | /auth/logout | 是 | 无 Body | null |
+
+### 8.3 三份文件同步更新
+
+#### docs/接口文档.md
+- 第2章认证模块完全重写：5 条接口，每条含请求字段表+JSON示例+响应字段表+JSON示例
+- register：email 必填 @qq.com + password 8-64
+- login：type=1 需 password，type=2 需 code（6位数字）
+- send-code：服务端行为4步（生成→Redis→日志→SMTP），429防刷60s
+
+#### docs/接口文档_apifox.json（OpenAPI 3.0.3）
+- 删除全局 security，改为每个接口单独标注
+  - 4 个免鉴权接口：register / login / login/send-code / refresh → security: []
+  - 36 个需鉴权接口 → security: [{BearerAuth: []}]
+  - ApiFox 导入后父级不再强制继承 Bearer Token，免鉴权接口可直接点测试
+- 新增 path：/auth/login/send-code
+- 修改 schemas：
+  - RegisterReq：{email(pattern=@qq.com), password}
+  - LoginReq：{email, type(enum[1,2]), password?, code?}
+  - SendCodeReq（新增）：{email}
+- JSON 语法自检通过
+
+#### docs/设计契约.md
+- 6.1 节接口表从 4 条更新为 5 条，字段与新接口文档严格一致
+
+### 8.4 下一会话
+等待用户指示按模块逐步重建后端 Java 代码

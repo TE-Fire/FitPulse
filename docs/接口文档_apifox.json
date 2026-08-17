@@ -1,4 +1,4 @@
-﻿{
+{
   "openapi": "3.0.3",
   "info": {
     "title": "FitPulse API",
@@ -12,15 +12,71 @@
     }
   ],
   "tags": [
-    { "name": "Auth", "description": "认证：注册/登录/刷新/登出" },
-    { "name": "Dashboard", "description": "看板：训练(B·C重点) / 健康(A·B重点)" },
-    { "name": "Training", "description": "训练：动作库 / 计划 / 记录" },
-    { "name": "Health", "description": "健康：身体指标 / 食物库 / 饮食 / 饮水" },
-    { "name": "File", "description": "文件上传（MinIO，可降级本地）" },
-    { "name": "AI", "description": "AI 对话 / 训练计划建议 / 饮食建议" },
-    { "name": "User", "description": "个人中心：资料 / 密码 / 目标" }
+    {
+      "name": "Auth",
+      "description": "认证：注册/登录/刷新/登出"
+    },
+    {
+      "name": "Dashboard",
+      "description": "看板：训练(B·C重点) / 健康(A·B重点)"
+    },
+    {
+      "name": "Training",
+      "description": "训练：动作库 / 计划 / 记录"
+    },
+    {
+      "name": "Health",
+      "description": "健康：身体指标 / 食物库 / 饮食 / 饮水"
+    },
+    {
+      "name": "File",
+      "description": "文件上传（MinIO，可降级本地）"
+    },
+    {
+      "name": "AI",
+      "description": "AI 对话 / 训练计划建议 / 饮食建议"
+    },
+    {
+      "name": "User",
+      "description": "个人中心：资料 / 密码 / 目标"
+    }
   ],
   "components": {
+    "parameters": {
+      "pageNum": {
+        "name": "pageNum",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "format": "int32",
+          "default": 1,
+          "minimum": 1
+        }
+      },
+      "pageSize": {
+        "name": "pageSize",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "format": "int32",
+          "default": 20,
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "pathId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1
+        }
+      }
+    },
     "securitySchemes": {
       "BearerAuth": {
         "type": "http",
@@ -32,786 +88,2325 @@
     "schemas": {
       "Result": {
         "type": "object",
-        "required": ["code", "message", "timestamp"],
+        "required": [
+          "code",
+          "message",
+          "timestamp"
+        ],
         "properties": {
-          "code": { "type": "integer", "format": "int32", "example": 0, "description": "0=成功 400参数 401未登录 403无权限 404不存在 409冲突 500异常" },
-          "message": { "type": "string", "example": "success" },
-          "data": { "nullable": true },
-          "timestamp": { "type": "integer", "format": "int64", "example": 1755410000000 }
+          "code": {
+            "type": "integer",
+            "format": "int32",
+            "example": 0
+          },
+          "message": {
+            "type": "string",
+            "example": "success"
+          },
+          "data": {
+            "nullable": true
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "example": 1755410000000
+          }
         }
       },
       "Page": {
         "type": "object",
-        "required": ["total", "pageNum", "pageSize", "pages", "list"],
+        "required": [
+          "total",
+          "pageNum",
+          "pageSize",
+          "pages",
+          "list"
+        ],
         "properties": {
-          "total": { "type": "integer", "format": "int64" },
-          "pageNum": { "type": "integer", "format": "int32" },
-          "pageSize": { "type": "integer", "format": "int32" },
-          "pages": { "type": "integer", "format": "int32" },
-          "list": { "type": "array", "items": {} }
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pageNum": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "list": {
+            "type": "array",
+            "items": {}
+          }
         }
-      },
-      "RegisterReq": {
-        "type": "object",
-        "required": ["username", "password"],
-        "properties": {
-          "username": { "type": "string", "minLength": 3, "maxLength": 32, "pattern": "^[A-Za-z0-9_]+$" },
-          "email":    { "type": "string", "format": "email", "nullable": true },
-          "password": { "type": "string", "minLength": 8,  "maxLength": 64, "description": "至少包含字母和数字" }
-        },
-        "example": { "username": "fire_dev", "email": "fire@fitpulse.local", "password": "Fire@2026" }
-      },
-      "LoginReq": {
-        "type": "object",
-        "required": ["username", "password"],
-        "properties": {
-          "username": { "type": "string" },
-          "password": { "type": "string" }
-        },
-        "example": { "username": "fire_dev", "password": "Fire@2026" }
-      },
-      "RefreshReq": {
-        "type": "object",
-        "required": ["refreshToken"],
-        "properties": { "refreshToken": { "type": "string" } }
       },
       "LoginUserVO": {
         "type": "object",
         "properties": {
-          "accessToken":  { "type": "string" },
-          "refreshToken": { "type": "string" },
-          "userId":       { "type": "integer", "format": "int64" },
-          "username":     { "type": "string" }
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "username": {
+            "type": "string"
+          }
         }
       },
       "TrainingOverview": {
         "type": "object",
-        "description": "训练看板：B=容量/组数/次数(蓝)  C=完成率/周容量趋势(绿)",
         "properties": {
-          "totalWorkoutsThisWeek": { "type": "integer", "format": "int32" },
-          "totalVolumeThisWeek":   { "type": "number", "description": "【重点B】本周训练容量 kg" },
-          "totalSetsThisWeek":     { "type": "integer", "format": "int32", "description": "【重点B】本周组数" },
-          "totalRepsThisWeek":     { "type": "integer", "format": "int32", "description": "【重点B】本周次数" },
-          "completionRate7d":      { "type": "number", "description": "【重点C】7日完成率 %" },
-          "streakDays":            { "type": "integer", "format": "int32", "description": "【重点C】连续训练天数" },
-          "totalPlans":            { "type": "integer", "format": "int32" },
+          "totalWorkoutsThisWeek": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalVolumeThisWeek": {
+            "type": "number",
+            "description": "【B】本周容量 kg"
+          },
+          "totalSetsThisWeek": {
+            "type": "integer",
+            "format": "int32",
+            "description": "【B】组数"
+          },
+          "totalRepsThisWeek": {
+            "type": "integer",
+            "format": "int32",
+            "description": "【B】次数"
+          },
+          "completionRate7d": {
+            "type": "number",
+            "description": "【C】7日完成率%"
+          },
+          "streakDays": {
+            "type": "integer",
+            "format": "int32",
+            "description": "【C】连续天数"
+          },
+          "totalPlans": {
+            "type": "integer",
+            "format": "int32"
+          },
           "weeklyVolumeTrend": {
             "type": "array",
-            "description": "【重点C】近7天容量+组数趋势",
-            "items": { "$ref": "#/components/schemas/VolumeTrendPoint" }
+            "description": "【C】近7天",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "volume": {
+                  "type": "number"
+                },
+                "sets": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
           }
-        }
-      },
-      "VolumeTrendPoint": {
-        "type": "object",
-        "properties": {
-          "date":   { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
-          "volume": { "type": "number" },
-          "sets":   { "type": "integer", "format": "int32" }
         }
       },
       "HealthOverview": {
         "type": "object",
-        "description": "健康看板：A=体重/体脂+30d趋势(紫)  B=摄入/饮水+7d(橙)",
         "properties": {
-          "latestWeight":    { "type": "number", "nullable": true, "description": "【重点A】最新体重 kg" },
-          "latestBodyFat":   { "type": "number", "nullable": true, "description": "【重点A】最新体脂率 %" },
-          "weightTrend30d": {
-            "type": "array", "description": "【重点A】30天体重趋势",
-            "items": { "$ref": "#/components/schemas/DateValuePoint" }
+          "latestWeight": {
+            "type": "number",
+            "nullable": true,
+            "description": "【A】最新体重 kg"
           },
-          "caloriesToday":   { "type": "number", "description": "【重点B】今日已摄入 kcal" },
-          "waterTodayMl":    { "type": "integer", "format": "int32", "description": "【重点B】今日饮水 ml" },
-          "waterGoalMl":     { "type": "integer", "format": "int32", "description": "【重点B】饮水目标 ml" },
-          "proteinTodayG":   { "type": "number" },
+          "latestBodyFat": {
+            "type": "number",
+            "nullable": true,
+            "description": "【A】最新体脂率%"
+          },
+          "weightTrend30d": {
+            "type": "array",
+            "description": "【A】30天体重",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "value": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "caloriesToday": {
+            "type": "number",
+            "description": "【B】今日 kcal"
+          },
+          "waterTodayMl": {
+            "type": "integer",
+            "format": "int32",
+            "description": "【B】今日饮水 ml"
+          },
+          "waterGoalMl": {
+            "type": "integer",
+            "format": "int32",
+            "description": "【B】饮水目标 ml"
+          },
+          "proteinTodayG": {
+            "type": "number"
+          },
           "caloriesLast7d": {
-            "type": "array", "description": "【重点B】近7天摄入 kcal",
-            "items": { "$ref": "#/components/schemas/DateValuePoint" }
+            "type": "array",
+            "description": "【B】近7天摄入",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "value": {
+                  "type": "number"
+                }
+              }
+            }
           }
-        }
-      },
-      "DateValuePoint": {
-        "type": "object",
-        "properties": {
-          "date":  { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
-          "value": { "type": "number" }
         }
       },
       "ExerciseVO": {
         "type": "object",
         "properties": {
-          "id":          { "type": "integer", "format": "int64" },
-          "name":        { "type": "string" },
-          "category":    { "type": "integer", "format": "int32", "description": "1胸 2背 3肩 4手臂 5腿 6核心 7有氧 8全身" },
-          "categoryName":{ "type": "string" },
-          "difficulty":  { "type": "integer", "format": "int32", "description": "1入门 2中级 3高级" },
-          "muscleGroup": { "type": "string", "nullable": true },
-          "description": { "type": "string", "nullable": true },
-          "imageUrl":    { "type": "string", "nullable": true },
-          "systemBuilt": { "type": "boolean" },
-          "createdAt":   { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "categoryName": {
+            "type": "string"
+          },
+          "difficulty": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "muscleGroup": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "systemBuilt": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "ExerciseSaveReq": {
         "type": "object",
-        "required": ["name", "category", "difficulty"],
+        "required": [
+          "name",
+          "category",
+          "difficulty"
+        ],
         "properties": {
-          "name":            { "type": "string", "minLength": 1, "maxLength": 50 },
-          "category":        { "type": "integer", "format": "int32", "minimum": 1, "maximum": 8 },
-          "difficulty":      { "type": "integer", "format": "int32", "minimum": 1, "maximum": 3 },
-          "muscleGroup":     { "type": "string", "maxLength": 50, "nullable": true },
-          "description":     { "type": "string", "maxLength": 500, "nullable": true },
-          "imageResourceId": { "type": "integer", "format": "int64", "nullable": true }
-        },
-        "example": {
-          "name": "哑铃集中弯举",
-          "category": 4,
-          "difficulty": 1,
-          "muscleGroup": "肱二头肌",
-          "description": "坐姿单臂、肘部贴大腿内侧、慢下放",
-          "imageResourceId": 12
-        }
-      },
-      "PlanExerciseLink": {
-        "type": "object",
-        "required": ["exerciseId", "sortOrder", "defaultSets", "defaultReps"],
-        "properties": {
-          "exerciseId":      { "type": "integer", "format": "int64" },
-          "sortOrder":       { "type": "integer", "format": "int32" },
-          "defaultSets":     { "type": "integer", "format": "int32", "minimum": 1 },
-          "defaultReps":     { "type": "integer", "format": "int32", "minimum": 1 },
-          "defaultWeightKg": { "type": "number", "nullable": true }
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "category": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 8
+          },
+          "difficulty": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "muscleGroup": {
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "imageResourceId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          }
         }
       },
       "PlanSaveReq": {
         "type": "object",
-        "required": ["name", "exercises"],
+        "required": [
+          "name",
+          "exercises"
+        ],
         "properties": {
-          "name":        { "type": "string", "minLength": 1, "maxLength": 50 },
-          "description": { "type": "string", "maxLength": 500, "nullable": true },
-          "daysPerWeek": { "type": "integer", "format": "int32", "minimum": 1, "maximum": 7, "nullable": true },
-          "exercises":   { "type": "array", "items": { "$ref": "#/components/schemas/PlanExerciseLink" } }
-        },
-        "example": {
-          "name": "新手胸+三头",
-          "description": "初学者友好，组间休息90秒",
-          "daysPerWeek": 2,
-          "exercises": [
-            { "exerciseId": 1, "sortOrder": 1, "defaultSets": 4, "defaultReps": 12, "defaultWeightKg": 20.0 }
-          ]
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "daysPerWeek": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 7,
+            "nullable": true
+          },
+          "exercises": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "exerciseId",
+                "sortOrder",
+                "defaultSets",
+                "defaultReps"
+              ],
+              "properties": {
+                "exerciseId": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "sortOrder": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "defaultSets": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 1
+                },
+                "defaultReps": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 1
+                },
+                "defaultWeightKg": {
+                  "type": "number",
+                  "nullable": true
+                }
+              }
+            }
+          }
         }
       },
       "PlanVO": {
         "type": "object",
         "properties": {
-          "id":           { "type": "integer", "format": "int64" },
-          "name":         { "type": "string" },
-          "description":  { "type": "string", "nullable": true },
-          "daysPerWeek":  { "type": "integer", "format": "int32", "nullable": true },
-          "exerciseCount":{ "type": "integer", "format": "int32" },
-          "createdAt":    { "type": "string", "format": "date-time" }
-        }
-      },
-      "WorkoutSetSubmit": {
-        "type": "object",
-        "required": ["exerciseId", "setNo", "weightKg", "reps"],
-        "properties": {
-          "exerciseId": { "type": "integer", "format": "int64" },
-          "setNo":      { "type": "integer", "format": "int32", "minimum": 1 },
-          "weightKg":   { "type": "number", "minimum": 0 },
-          "reps":       { "type": "integer", "format": "int32", "minimum": 1 },
-          "rpe":        { "type": "integer", "format": "int32", "minimum": 1, "maximum": 10, "nullable": true }
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "daysPerWeek": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "exerciseCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "WorkoutRecordSubmitReq": {
         "type": "object",
-        "required": ["trainedAt", "durationMin", "sets"],
+        "required": [
+          "trainedAt",
+          "durationMin",
+          "sets"
+        ],
         "properties": {
-          "planId":     { "type": "integer", "format": "int64", "nullable": true, "description": "可空=自由训练" },
-          "trainedAt":  { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$" },
-          "durationMin":{ "type": "integer", "format": "int32", "minimum": 1 },
-          "notes":      { "type": "string", "maxLength": 500, "nullable": true },
-          "sets":       { "type": "array", "items": { "$ref": "#/components/schemas/WorkoutSetSubmit" } }
-        },
-        "example": {
-          "planId": 1,
-          "trainedAt": "2026-08-16 19:30",
-          "durationMin": 65,
-          "notes": "今天状态不错，卧推加重2.5kg",
-          "sets": [
-            { "exerciseId": 1, "setNo": 1, "weightKg": 42.5, "reps": 10, "rpe": 8 },
-            { "exerciseId": 1, "setNo": 2, "weightKg": 42.5, "reps": 10, "rpe": 8 }
-          ]
+          "planId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "trainedAt": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$"
+          },
+          "durationMin": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "sets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "exerciseId",
+                "setNo",
+                "weightKg",
+                "reps"
+              ],
+              "properties": {
+                "exerciseId": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "setNo": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 1
+                },
+                "weightKg": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "reps": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 1
+                },
+                "rpe": {
+                  "type": "integer",
+                  "format": "int32",
+                  "nullable": true,
+                  "minimum": 1,
+                  "maximum": 10
+                }
+              }
+            }
+          }
         }
       },
       "RecordSummaryVO": {
         "type": "object",
         "properties": {
-          "id":          { "type": "integer", "format": "int64" },
-          "totalVolume": { "type": "number", "description": "B维度：训练容量kg" },
-          "totalSets":   { "type": "integer", "format": "int32", "description": "B维度：组数" },
-          "totalReps":   { "type": "integer", "format": "int32", "description": "B维度：次数" }
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalVolume": {
+            "type": "number"
+          },
+          "totalSets": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalReps": {
+            "type": "integer",
+            "format": "int32"
+          }
         }
       },
       "RecordListItemVO": {
         "allOf": [
-          { "$ref": "#/components/schemas/RecordSummaryVO" },
+          {
+            "$ref": "#/components/schemas/RecordSummaryVO"
+          },
           {
             "type": "object",
             "properties": {
-              "trainedAt":  { "type": "string" },
-              "planName":   { "type": "string", "nullable": true },
-              "durationMin":{ "type": "integer", "format": "int32" }
+              "trainedAt": {
+                "type": "string"
+              },
+              "planName": {
+                "type": "string",
+                "nullable": true
+              },
+              "durationMin": {
+                "type": "integer",
+                "format": "int32"
+              }
             }
           }
         ]
       },
       "BodyMetricSaveReq": {
         "type": "object",
-        "required": ["metricType", "value", "measuredAt"],
+        "required": [
+          "metricType",
+          "value",
+          "measuredAt"
+        ],
         "properties": {
-          "metricType": { "type": "integer", "format": "int32", "description": "1体重 2体脂 3腰围 4胸围 5臂围 6腿围 7BMI 8其他" },
-          "value":      { "type": "number", "exclusiveMinimum": 0 },
-          "unit":       { "type": "string", "maxLength": 10, "nullable": true },
-          "measuredAt": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$" },
-          "note":       { "type": "string", "maxLength": 100, "nullable": true }
+          "metricType": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "value": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 10,
+            "nullable": true
+          },
+          "measuredAt": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 100,
+            "nullable": true
+          }
         }
       },
       "BodyMetricVO": {
         "allOf": [
-          { "$ref": "#/components/schemas/BodyMetricSaveReq" },
-          { "type": "object", "properties": {
-              "id": { "type": "integer", "format": "int64" },
-              "createdAt": { "type": "string", "format": "date-time" }
-          }}
+          {
+            "$ref": "#/components/schemas/BodyMetricSaveReq"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
         ]
       },
       "FoodVO": {
         "type": "object",
         "properties": {
-          "id":            { "type": "integer", "format": "int64" },
-          "name":          { "type": "string" },
-          "category":      { "type": "integer", "format": "int32" },
-          "serving":       { "type": "string", "nullable": true },
-          "kcalPer100g":   { "type": "number" },
-          "proteinG":      { "type": "number", "nullable": true },
-          "carbG":         { "type": "number", "nullable": true },
-          "fatG":          { "type": "number", "nullable": true },
-          "imageUrl":      { "type": "string", "nullable": true },
-          "systemBuilt":   { "type": "boolean" }
-        }
-      },
-      "MealItem": {
-        "type": "object",
-        "required": ["qtyG", "kcal"],
-        "properties": {
-          "foodId":    { "type": "integer", "format": "int64", "nullable": true, "description": "空=手动录入，此时foodName必填" },
-          "foodName":  { "type": "string", "nullable": true },
-          "qtyG":      { "type": "number", "minimum": 0 },
-          "kcal":      { "type": "number", "minimum": 0 },
-          "proteinG":  { "type": "number", "nullable": true },
-          "carbG":     { "type": "number", "nullable": true },
-          "fatG":      { "type": "number", "nullable": true }
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "serving": {
+            "type": "string",
+            "nullable": true
+          },
+          "kcalPer100g": {
+            "type": "number"
+          },
+          "proteinG": {
+            "type": "number",
+            "nullable": true
+          },
+          "carbG": {
+            "type": "number",
+            "nullable": true
+          },
+          "fatG": {
+            "type": "number",
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "systemBuilt": {
+            "type": "boolean"
+          }
         }
       },
       "MealSaveReq": {
         "type": "object",
-        "required": ["mealType", "ateAt", "items"],
+        "required": [
+          "mealType",
+          "ateAt",
+          "items"
+        ],
         "properties": {
-          "mealType":          { "type": "integer", "format": "int32", "description": "1早 2午 3晚 4加餐" },
-          "ateAt":             { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$" },
-          "items":             { "type": "array", "items": { "$ref": "#/components/schemas/MealItem" } },
-          "imageResourceId":   { "type": "integer", "format": "int64", "nullable": true },
-          "note":              { "type": "string", "maxLength": 200, "nullable": true }
+          "mealType": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "ateAt": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "qtyG",
+                "kcal"
+              ],
+              "properties": {
+                "foodId": {
+                  "type": "integer",
+                  "format": "int64",
+                  "nullable": true
+                },
+                "foodName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "qtyG": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "kcal": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "proteinG": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "carbG": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "fatG": {
+                  "type": "number",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "imageResourceId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 200,
+            "nullable": true
+          }
         }
       },
       "MealVO": {
         "type": "object",
         "properties": {
-          "id":            { "type": "integer", "format": "int64" },
-          "mealType":      { "type": "integer", "format": "int32" },
-          "ateAt":         { "type": "string" },
-          "totalKcal":     { "type": "number", "description": "B维度：餐次热量" },
-          "totalProteinG": { "type": "number" },
-          "note":          { "type": "string", "nullable": true },
-          "imageUrl":      { "type": "string", "nullable": true },
-          "itemCount":     { "type": "integer", "format": "int32" }
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "mealType": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "ateAt": {
+            "type": "string"
+          },
+          "totalKcal": {
+            "type": "number"
+          },
+          "totalProteinG": {
+            "type": "number"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "itemCount": {
+            "type": "integer",
+            "format": "int32"
+          }
         }
       },
       "WaterSaveReq": {
         "type": "object",
-        "required": ["ml"],
+        "required": [
+          "ml"
+        ],
         "properties": {
-          "ml":      { "type": "integer", "format": "int32", "minimum": 1 },
-          "drankAt": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$", "nullable": true, "description": "空=当前时间" }
+          "ml": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1
+          },
+          "drankAt": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$"
+          }
         }
       },
       "WaterVO": {
         "type": "object",
         "properties": {
-          "id":      { "type": "integer", "format": "int64" },
-          "ml":      { "type": "integer", "format": "int32" },
-          "drankAt": { "type": "string" }
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ml": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "drankAt": {
+            "type": "string"
+          }
         }
       },
       "WaterTodayVO": {
         "type": "object",
         "properties": {
-          "id":           { "type": "integer", "format": "int64" },
-          "todayTotalMl": { "type": "integer", "format": "int32", "description": "B维度：当日饮水总量" }
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "todayTotalMl": {
+            "type": "integer",
+            "format": "int32"
+          }
         }
       },
       "FileUploadVO": {
         "type": "object",
         "properties": {
-          "id":      { "type": "integer", "format": "int64" },
-          "fileUrl": { "type": "string" }
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "fileUrl": {
+            "type": "string"
+          }
         }
       },
       "AiChatReq": {
         "type": "object",
-        "required": ["message"],
+        "required": [
+          "message"
+        ],
         "properties": {
-          "message":        { "type": "string", "minLength": 1, "maxLength": 2000 },
-          "conversationId": { "type": "string", "nullable": true, "description": "首次不传，后续用返回的值续聊" }
-        },
-        "example": { "message": "我今天练腿感觉膝盖疼，要不要减量？", "conversationId": null }
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "conversationId": {
+            "type": "string",
+            "nullable": true
+          }
+        }
       },
       "AiChatVO": {
         "type": "object",
         "properties": {
-          "reply":          { "type": "string", "description": "AI回复（Markdown）" },
-          "conversationId": { "type": "string" }
+          "reply": {
+            "type": "string"
+          },
+          "conversationId": {
+            "type": "string"
+          }
         }
       },
       "AiPlanAdviseReq": {
         "type": "object",
-        "required": ["goalType", "daysPerWeek", "equipmentAvailable"],
+        "required": [
+          "goalType",
+          "daysPerWeek",
+          "equipmentAvailable"
+        ],
         "properties": {
-          "goalType":            { "type": "integer", "format": "int32", "description": "GoalType 1减脂2增肌3塑形4维持5力量举" },
-          "daysPerWeek":         { "type": "integer", "format": "int32", "minimum": 1, "maximum": 7 },
-          "equipmentAvailable":  { "type": "array", "items": { "type": "string" }, "example": ["哑铃","杠铃"] }
+          "goalType": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "daysPerWeek": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 7
+          },
+          "equipmentAvailable": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         }
       },
       "AiMealAdviseReq": {
         "type": "object",
-        "required": ["todayKcalTarget", "goalType"],
+        "required": [
+          "todayKcalTarget",
+          "goalType"
+        ],
         "properties": {
-          "todayKcalTarget": { "type": "integer", "format": "int32", "minimum": 1 },
-          "goalType":        { "type": "integer", "format": "int32" }
+          "todayKcalTarget": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1
+          },
+          "goalType": {
+            "type": "integer",
+            "format": "int32"
+          }
         }
       },
       "MarkdownVO": {
         "type": "object",
         "properties": {
-          "markdown": { "type": "string", "description": "Markdown 格式的建议文本" }
+          "markdown": {
+            "type": "string"
+          }
         }
       },
       "UserGoalVO": {
         "type": "object",
         "properties": {
-          "goalType":          { "type": "integer", "format": "int32" },
-          "targetWeightKg":    { "type": "number", "nullable": true },
-          "weeklyWorkoutDays": { "type": "integer", "format": "int32", "nullable": true },
-          "kcalTarget":        { "type": "integer", "format": "int32", "nullable": true },
-          "waterGoalMl":       { "type": "integer", "format": "int32", "nullable": true }
+          "goalType": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "targetWeightKg": {
+            "type": "number",
+            "nullable": true
+          },
+          "weeklyWorkoutDays": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "kcalTarget": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "waterGoalMl": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
         }
       },
       "UserMeVO": {
         "type": "object",
         "properties": {
-          "userId":       { "type": "integer", "format": "int64" },
-          "username":     { "type": "string" },
-          "email":        { "type": "string", "nullable": true },
-          "nickname":     { "type": "string", "nullable": true },
-          "avatarUrl":    { "type": "string", "nullable": true },
-          "gender":       { "type": "integer", "format": "int32", "nullable": true },
-          "heightCm":     { "type": "number", "nullable": true },
-          "birthday":     { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "nullable": true },
-          "registeredAt": { "type": "string", "format": "date-time" },
-          "goal":         { "nullable": true, "allOf": [{ "$ref": "#/components/schemas/UserGoalVO" }] }
+          "userId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "username": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "nickname": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "gender": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "heightCm": {
+            "type": "number",
+            "nullable": true
+          },
+          "birthday": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "registeredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "goal": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserGoalVO"
+              }
+            ]
+          }
         }
       },
       "UserProfileUpdateReq": {
         "type": "object",
         "properties": {
-          "nickname":          { "type": "string", "maxLength": 50, "nullable": true },
-          "avatarResourceId":  { "type": "integer", "format": "int64", "nullable": true },
-          "gender":            { "type": "integer", "format": "int32", "nullable": true },
-          "heightCm":          { "type": "number", "nullable": true },
-          "birthday":          { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "nullable": true },
-          "email":             { "type": "string", "format": "email", "nullable": true, "description": "变更将校验唯一性" }
+          "nickname": {
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "avatarResourceId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "gender": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "heightCm": {
+            "type": "number",
+            "nullable": true
+          },
+          "birthday": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "nullable": true
+          }
         }
       },
       "UserPasswordUpdateReq": {
         "type": "object",
-        "required": ["oldPassword", "newPassword"],
+        "required": [
+          "oldPassword",
+          "newPassword"
+        ],
         "properties": {
-          "oldPassword": { "type": "string" },
-          "newPassword": { "type": "string", "minLength": 8, "maxLength": 64, "description": "字母+数字" }
+          "oldPassword": {
+            "type": "string"
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 64
+          }
         }
       },
       "UserGoalUpdateReq": {
         "type": "object",
-        "required": ["goalType"],
+        "required": [
+          "goalType"
+        ],
         "properties": {
-          "goalType":          { "type": "integer", "format": "int32" },
-          "targetWeightKg":    { "type": "number", "nullable": true },
-          "weeklyWorkoutDays": { "type": "integer", "format": "int32", "minimum": 1, "maximum": 7, "nullable": true },
-          "kcalTarget":        { "type": "integer", "format": "int32", "minimum": 1, "nullable": true },
-          "waterGoalMl":       { "type": "integer", "format": "int32", "minimum": 1, "nullable": true }
+          "goalType": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "targetWeightKg": {
+            "type": "number",
+            "nullable": true
+          },
+          "weeklyWorkoutDays": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 7,
+            "nullable": true
+          },
+          "kcalTarget": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "nullable": true
+          },
+          "waterGoalMl": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "nullable": true
+          }
         }
       },
       "IdVO": {
         "type": "object",
-        "properties": { "id": { "type": "integer", "format": "int64" } }
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "RegisterReq": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "pattern": "^[^@]+@qq\\.com$",
+            "description": "必须以 @qq.com 结尾"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 64,
+            "description": "至少包含字母和数字"
+          }
+        },
+        "example": {
+          "email": "fire_dev@qq.com",
+          "password": "Fire@2026"
+        }
+      },
+      "LoginReq": {
+        "type": "object",
+        "required": [
+          "email",
+          "type"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "pattern": "^[^@]+@qq\\.com$",
+            "description": "QQ 邮箱"
+          },
+          "type": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [
+              1,
+              2
+            ],
+            "description": "1=密码登录 2=验证码登录"
+          },
+          "password": {
+            "type": "string",
+            "nullable": true,
+            "description": "仅 type=1 时必填，8-64位"
+          },
+          "code": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^\\d{6}$",
+            "description": "仅 type=2 时必填，6位数字"
+          }
+        },
+        "example": {
+          "email": "fire_dev@qq.com",
+          "type": 1,
+          "password": "Fire@2026"
+        }
+      },
+      "SendCodeReq": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "pattern": "^[^@]+@qq\\.com$",
+            "description": "接收验证码的 QQ 邮箱"
+          }
+        },
+        "example": {
+          "email": "fire_dev@qq.com"
+        }
       }
     }
   },
-  "security": [{ "BearerAuth": [] }],
   "paths": {
-    "/auth/register": {
-      "post": {
-        "tags": ["Auth"],
-        "summary": "注册",
-        "security": [],
-        "requestBody": {
-          "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegisterReq" } } }
-        },
-        "responses": {
-          "200": { "description": "成功(data=null)",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Result" },
-              "example": { "code": 0, "message": "success", "data": null, "timestamp": 1755410000000 } } } }
-        }
-      }
-    },
-    "/auth/login": {
-      "post": {
-        "tags": ["Auth"],
-        "summary": "登录",
-        "security": [],
-        "requestBody": {
-          "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginReq" } } }
-        },
-        "responses": {
-          "200": { "description": "登录成功，返回 Token 对 + 用户信息",
-            "content": { "application/json": {
-              "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-                { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/LoginUserVO" } } }] }
-            } }
-          }
-        }
-      }
-    },
-    "/auth/refresh": {
-      "post": {
-        "tags": ["Auth"],
-        "summary": "刷新 Token 对（用 refreshToken）",
-        "security": [],
-        "requestBody": {
-          "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RefreshReq" } } }
-        },
-        "responses": {
-          "200": { "description": "新 Token 对",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/LoginUserVO" } } }] } } }
-          }
-        }
-      }
-    },
-    "/auth/logout": {
-      "post": {
-        "tags": ["Auth"],
-        "summary": "登出（失效当前用户 token 缓存）",
-        "responses": {
-          "200": { "description": "成功",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Result" } } } }
-        }
-      }
-    },
-
     "/admin/dashboard/training": {
       "get": {
-        "tags": ["Dashboard"],
+        "tags": [
+          "Dashboard"
+        ],
         "summary": "训练看板：B(容量/组数/次数) + C(完成率/周趋势) 重点",
         "responses": {
-          "200": { "description": "TrainingOverview",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/TrainingOverview" } } }] } } } }
-        }
+          "200": {
+            "description": "TrainingOverview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/TrainingOverview"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/admin/dashboard/health": {
       "get": {
-        "tags": ["Dashboard"],
+        "tags": [
+          "Dashboard"
+        ],
         "summary": "健康看板：A(体重/体脂) + B(摄入/饮水) 重点",
         "responses": {
-          "200": { "description": "HealthOverview",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/HealthOverview" } } }] } } } }
-        }
+          "200": {
+            "description": "HealthOverview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/HealthOverview"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
-
     "/training/exercises": {
       "get": {
-        "tags": ["Training"],
+        "tags": [
+          "Training"
+        ],
         "summary": "动作库分页 + 筛选",
         "parameters": [
-          { "$ref": "#/components/parameters/pageNum" },
-          { "$ref": "#/components/parameters/pageSize" },
-          { "name": "keyword", "in": "query", "schema": { "type": "string" } },
-          { "name": "category", "in": "query", "schema": { "type": "integer", "format": "int32" }, "description": "ExerciseCategory" },
-          { "name": "customOnly", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "true=仅我的自定义" }
+          {
+            "$ref": "#/components/parameters/pageNum"
+          },
+          {
+            "$ref": "#/components/parameters/pageSize"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "ExerciseCategory"
+          },
+          {
+            "name": "customOnly",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "true=仅我的自定义"
+          }
         ],
         "responses": {
-          "200": { "description": "PageResult<ExerciseVO>",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "allOf": [{ "$ref": "#/components/schemas/Page" },
-                { "type": "object", "properties": { "list": { "type": "array", "items": { "$ref": "#/components/schemas/ExerciseVO" } } } }] } } }] } } }
+          "200": {
+            "description": "PageResult<ExerciseVO>",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/Page"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "list": {
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/components/schemas/ExerciseVO"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       },
       "post": {
-        "tags": ["Training"],
+        "tags": [
+          "Training"
+        ],
         "summary": "新增自定义动作",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ExerciseSaveReq" } } } },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExerciseSaveReq"
+              }
+            }
+          }
+        },
         "responses": {
-          "201": { "description": "新建动作ID",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/IdVO" } } }] } } } }
-        }
+          "201": {
+            "description": "新建动作ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/IdVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/training/exercises/{id}": {
-      "parameters": [{ "$ref": "#/components/parameters/pathId" }],
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/pathId"
+        }
+      ],
       "put": {
-        "tags": ["Training"], "summary": "修改动作（仅本人自定义）",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ExerciseSaveReq" } } } },
-        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Result" } } } } }
+        "tags": [
+          "Training"
+        ],
+        "summary": "修改动作（仅本人自定义）",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExerciseSaveReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       },
       "delete": {
-        "tags": ["Training"], "summary": "删除动作（仅本人自定义）",
-        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Result" } } } } }
+        "tags": [
+          "Training"
+        ],
+        "summary": "删除动作（仅本人自定义）",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
-
     "/training/plans": {
       "get": {
-        "tags": ["Training"], "summary": "我的训练计划列表",
+        "tags": [
+          "Training"
+        ],
+        "summary": "我的训练计划列表",
         "parameters": [
-          { "$ref": "#/components/parameters/pageNum" },
-          { "$ref": "#/components/parameters/pageSize" },
-          { "name": "keyword", "in": "query", "schema": { "type": "string" } }
+          {
+            "$ref": "#/components/parameters/pageNum"
+          },
+          {
+            "$ref": "#/components/parameters/pageSize"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
-          "200": { "description": "PageResult<PlanVO>",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "allOf": [{ "$ref": "#/components/schemas/Page" },
-                { "type": "object", "properties": { "list": { "type": "array", "items": { "$ref": "#/components/schemas/PlanVO" } } } }] } } }] } } }
+          "200": {
+            "description": "PageResult<PlanVO>",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/Page"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "list": {
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/components/schemas/PlanVO"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       },
       "post": {
-        "tags": ["Training"], "summary": "新建训练计划（含动作关联）",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PlanSaveReq" } } } },
+        "tags": [
+          "Training"
+        ],
+        "summary": "新建训练计划（含动作关联）",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanSaveReq"
+              }
+            }
+          }
+        },
         "responses": {
-          "201": { "description": "新建计划ID",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/IdVO" } } }] } } } }
-        }
+          "201": {
+            "description": "新建计划ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/IdVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/training/plans/{id}": {
-      "parameters": [{ "$ref": "#/components/parameters/pathId" }],
-      "put":    { "tags":["Training"], "summary":"修改训练计划",
-                  "requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/PlanSaveReq"}}}},
-                  "responses":{"200":{"description":"OK","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Result"}}}}}},
-      "delete": { "tags":["Training"], "summary":"删除训练计划",
-                  "responses":{"200":{"description":"OK","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Result"}}}}}}
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/pathId"
+        }
+      ],
+      "put": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "修改训练计划",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanSaveReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "删除训练计划",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
     },
-
     "/training/records": {
       "get": {
-        "tags": ["Training"], "summary": "训练记录分页（按日期段筛选）",
+        "tags": [
+          "Training"
+        ],
+        "summary": "训练记录分页（按日期段筛选）",
         "parameters": [
-          { "$ref": "#/components/parameters/pageNum" },
-          { "$ref": "#/components/parameters/pageSize" },
-          { "name": "startDate", "in": "query", "schema": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" } },
-          { "name": "endDate",   "in": "query", "schema": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" } }
+          {
+            "$ref": "#/components/parameters/pageNum"
+          },
+          {
+            "$ref": "#/components/parameters/pageSize"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          }
         ],
         "responses": {
-          "200": { "description": "PageResult<RecordListItemVO>",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "allOf": [{ "$ref": "#/components/schemas/Page" },
-                { "type": "object", "properties": { "list": { "type": "array", "items": { "$ref": "#/components/schemas/RecordListItemVO" } } } }] } } }] } } }
+          "200": {
+            "description": "PageResult<RecordListItemVO>",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/Page"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "list": {
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/components/schemas/RecordListItemVO"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       },
       "post": {
-        "tags": ["Training"], "summary": "提交一次训练（回写B·C维度统计）",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WorkoutRecordSubmitReq" } } } },
+        "tags": [
+          "Training"
+        ],
+        "summary": "提交一次训练（回写B·C维度统计）",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkoutRecordSubmitReq"
+              }
+            }
+          }
+        },
         "responses": {
-          "201": { "description": "ID + 回算 容量/组数/次数",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/RecordSummaryVO" } } }] } } } }
-        }
+          "201": {
+            "description": "ID + 回算 容量/组数/次数",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/RecordSummaryVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/training/records/{id}": {
-      "parameters": [{ "$ref": "#/components/parameters/pathId" }],
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/pathId"
+        }
+      ],
       "get": {
-        "tags": ["Training"], "summary": "训练详情（按动作聚合组明细）",
-        "responses": { "200": { "description": "detail VO（含 动作分组 + 组明细）",
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Result" } } } } }
+        "tags": [
+          "Training"
+        ],
+        "summary": "训练详情（按动作聚合组明细）",
+        "responses": {
+          "200": {
+            "description": "detail VO（含 动作分组 + 组明细）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
-
     "/health/body-metrics": {
       "get": {
-        "tags": ["Health"], "summary": "身体指标分页（A维度：体重/体脂来源）",
+        "tags": [
+          "Health"
+        ],
+        "summary": "身体指标分页（A维度：体重/体脂来源）",
         "parameters": [
-          { "$ref": "#/components/parameters/pageNum" },
-          { "$ref": "#/components/parameters/pageSize" },
-          { "name": "startDate",  "in": "query", "schema": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" } },
-          { "name": "endDate",    "in": "query", "schema": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" } },
-          { "name": "metricType", "in": "query", "schema": { "type": "integer", "format": "int32" } }
+          {
+            "$ref": "#/components/parameters/pageNum"
+          },
+          {
+            "$ref": "#/components/parameters/pageSize"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          {
+            "name": "metricType",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
         ],
         "responses": {
-          "200": { "description": "PageResult<BodyMetricVO>",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "allOf": [{ "$ref": "#/components/schemas/Page" },
-                { "type": "object", "properties": { "list": { "type": "array", "items": { "$ref": "#/components/schemas/BodyMetricVO" } } } }] } } }] } } }
+          "200": {
+            "description": "PageResult<BodyMetricVO>",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/Page"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "list": {
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/components/schemas/BodyMetricVO"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       },
       "post": {
-        "tags": ["Health"], "summary": "录入身体指标",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BodyMetricSaveReq" } } } },
+        "tags": [
+          "Health"
+        ],
+        "summary": "录入身体指标",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BodyMetricSaveReq"
+              }
+            }
+          }
+        },
         "responses": {
-          "201": { "description": "新建 ID",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/IdVO" } } }] } } } }
-        }
+          "201": {
+            "description": "新建 ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/IdVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/health/body-metrics/{id}": {
-      "parameters": [{ "$ref": "#/components/parameters/pathId" }],
-      "put":    { "tags":["Health"], "summary":"修改身体指标",
-                  "requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/BodyMetricSaveReq"}}}},
-                  "responses":{"200":{"description":"OK","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Result"}}}}}},
-      "delete": { "tags":["Health"], "summary":"删除身体指标",
-                  "responses":{"200":{"description":"OK","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Result"}}}}}}
-    },
-
-    "/health/foods": {
-      "get": {
-        "tags": ["Health"], "summary": "食物库搜索分页",
-        "parameters": [
-          { "$ref": "#/components/parameters/pageNum" },
-          { "$ref": "#/components/parameters/pageSize" },
-          { "name": "keyword",  "in": "query", "schema": { "type": "string" } },
-          { "name": "category", "in": "query", "schema": { "type": "integer", "format": "int32" } }
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/pathId"
+        }
+      ],
+      "put": {
+        "tags": [
+          "Health"
         ],
-        "responses": {
-          "200": { "description": "PageResult<FoodVO>",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "allOf": [{ "$ref": "#/components/schemas/Page" },
-                { "type": "object", "properties": { "list": { "type": "array", "items": { "$ref": "#/components/schemas/FoodVO" } } } }] } } }] } } }
+        "summary": "修改身体指标",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BodyMetricSaveReq"
+              }
+            }
           }
-        }
-      },
-      "post": {
-        "tags": ["Health"], "summary": "新增自定义食物",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FoodVO" } } } },
+        },
         "responses": {
-          "201": { "description": "新建 ID",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/IdVO" } } }] } } } }
-        }
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "删除身体指标",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
-
-    "/health/meals": {
+    "/health/foods": {
       "get": {
-        "tags": ["Health"], "summary": "饮食记录分页（B维度热量来源）",
+        "tags": [
+          "Health"
+        ],
+        "summary": "食物库搜索分页",
         "parameters": [
-          { "$ref": "#/components/parameters/pageNum" },
-          { "$ref": "#/components/parameters/pageSize" },
-          { "name": "startDate", "in": "query", "schema": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" } },
-          { "name": "endDate",   "in": "query", "schema": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" } },
-          { "name": "mealType",  "in": "query", "schema": { "type": "integer", "format": "int32" } }
+          {
+            "$ref": "#/components/parameters/pageNum"
+          },
+          {
+            "$ref": "#/components/parameters/pageSize"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
         ],
         "responses": {
-          "200": { "description": "PageResult<MealVO>",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "allOf": [{ "$ref": "#/components/schemas/Page" },
-                { "type": "object", "properties": { "list": { "type": "array", "items": { "$ref": "#/components/schemas/MealVO" } } } }] } } }] } } }
+          "200": {
+            "description": "PageResult<FoodVO>",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/Page"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "list": {
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/components/schemas/FoodVO"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       },
       "post": {
-        "tags": ["Health"], "summary": "新增饮食记录（当日看板立即更新）",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MealSaveReq" } } } },
+        "tags": [
+          "Health"
+        ],
+        "summary": "新增自定义食物",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FoodVO"
+              }
+            }
+          }
+        },
         "responses": {
-          "201": { "description": "ID + 总热量 + 总蛋白",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "type": "object", "properties": {
-                "id": { "type":"integer","format":"int64" },
-                "totalKcal": { "type":"number" },
-                "totalProteinG": { "type":"number" }
-              } } } }] } } } }
-        }
+          "201": {
+            "description": "新建 ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/IdVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/health/meals": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "饮食记录分页（B维度热量来源）",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/pageNum"
+          },
+          {
+            "$ref": "#/components/parameters/pageSize"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          {
+            "name": "mealType",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PageResult<MealVO>",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/Page"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "list": {
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/components/schemas/MealVO"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "新增饮食记录（当日看板立即更新）",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MealSaveReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "ID + 总热量 + 总蛋白",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "format": "int64"
+                            },
+                            "totalKcal": {
+                              "type": "number"
+                            },
+                            "totalProteinG": {
+                              "type": "number"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/health/meals/{id}": {
-      "parameters": [{ "$ref": "#/components/parameters/pathId" }],
-      "put":    { "tags":["Health"], "summary":"修改饮食记录",
-                  "requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/MealSaveReq"}}}},
-                  "responses":{"200":{"description":"OK","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Result"}}}}}},
-      "delete": { "tags":["Health"], "summary":"删除饮食记录",
-                  "responses":{"200":{"description":"OK","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Result"}}}}}}
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/pathId"
+        }
+      ],
+      "put": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "修改饮食记录",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MealSaveReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "删除饮食记录",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
     },
-
     "/health/water": {
       "get": {
-        "tags": ["Health"], "summary": "当日饮水明细（B维度）",
+        "tags": [
+          "Health"
+        ],
+        "summary": "当日饮水明细（B维度）",
         "responses": {
-          "200": { "description": "当日所有杯数，非分页",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/WaterVO" } } } }] } } }
+          "200": {
+            "description": "当日所有杯数，非分页",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/WaterVO"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       },
       "post": {
-        "tags": ["Health"], "summary": "追加一次饮水",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WaterSaveReq" } } } },
+        "tags": [
+          "Health"
+        ],
+        "summary": "追加一次饮水",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaterSaveReq"
+              }
+            }
+          }
+        },
         "responses": {
-          "201": { "description": "ID + 当日饮水总量",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/WaterTodayVO" } } }] } } } }
-        }
+          "201": {
+            "description": "ID + 当日饮水总量",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/WaterTodayVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/health/water/{id}": {
-      "parameters": [{ "$ref": "#/components/parameters/pathId" }],
-      "delete": {
-        "tags": ["Health"], "summary": "删除一条饮水记录，返回最新当日总量",
-        "responses": {
-          "200": { "description": "{ todayTotalMl }",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "type":"object","properties":{"todayTotalMl":{"type":"integer","format":"int32"}} } } }] } } }
-          }
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/pathId"
         }
+      ],
+      "delete": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "删除一条饮水记录，返回最新当日总量",
+        "responses": {
+          "200": {
+            "description": "{ todayTotalMl }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "todayTotalMl": {
+                              "type": "integer",
+                              "format": "int32"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
-
     "/file/upload": {
       "post": {
-        "tags": ["File"],
+        "tags": [
+          "File"
+        ],
         "summary": "multipart 上传文件（avatar/exercise/food/general）",
         "requestBody": {
           "required": true,
@@ -819,481 +2414,560 @@
             "multipart/form-data": {
               "schema": {
                 "type": "object",
-                "required": ["file", "bucket"],
+                "required": [
+                  "file",
+                  "bucket"
+                ],
                 "properties": {
-                  "file":   { "type": "string", "format": "binary", "description": "≤10MB，图片支持 jpg/png/webp/gif" },
-                  "bucket": { "type": "string", "enum": ["avatar", "exercise", "food", "general"] }
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "≤10MB，图片支持 jpg/png/webp/gif"
+                  },
+                  "bucket": {
+                    "type": "string",
+                    "enum": [
+                      "avatar",
+                      "exercise",
+                      "food",
+                      "general"
+                    ]
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "201": { "description": "文件ID + 可访问 URL",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/FileUploadVO" } } }] } } } }
-        }
+          "201": {
+            "description": "文件ID + 可访问 URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/FileUploadVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
-
     "/ai/chat": {
       "post": {
-        "tags": ["AI"], "summary": "AI 自由对话（延续会话传 conversationId）",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AiChatReq" } } } },
+        "tags": [
+          "AI"
+        ],
+        "summary": "AI 自由对话（延续会话传 conversationId）",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiChatReq"
+              }
+            }
+          }
+        },
         "responses": {
-          "200": { "description": "Markdown 回复 + 会话ID",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/AiChatVO" } } }] } } } }
-        }
+          "200": {
+            "description": "Markdown 回复 + 会话ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AiChatVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/ai/advise/training-plan": {
       "post": {
-        "tags": ["AI"], "summary": "生成训练计划建议 Markdown",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AiPlanAdviseReq" } } } },
+        "tags": [
+          "AI"
+        ],
+        "summary": "生成训练计划建议 Markdown",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiPlanAdviseReq"
+              }
+            }
+          }
+        },
         "responses": {
-          "200": { "description": "Markdown",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/MarkdownVO" } } }] } } } }
-        }
+          "200": {
+            "description": "Markdown",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/MarkdownVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/ai/advise/meal": {
       "post": {
-        "tags": ["AI"], "summary": "生成饮食建议 Markdown",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AiMealAdviseReq" } } } },
+        "tags": [
+          "AI"
+        ],
+        "summary": "生成饮食建议 Markdown",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiMealAdviseReq"
+              }
+            }
+          }
+        },
         "responses": {
-          "200": { "description": "Markdown",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/MarkdownVO" } } }] } } } }
-        }
+          "200": {
+            "description": "Markdown",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/MarkdownVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
-
     "/user/me": {
       "get": {
-        "tags": ["User"], "summary": "我的资料（合并目标）",
+        "tags": [
+          "User"
+        ],
+        "summary": "我的资料（合并目标）",
         "responses": {
-          "200": { "description": "UserMeVO",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/UserMeVO" } } }] } } } }
-        }
+          "200": {
+            "description": "UserMeVO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/UserMeVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       },
       "put": {
-        "tags": ["User"], "summary": "修改资料",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserProfileUpdateReq" } } } },
-        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Result" } } } } }
+        "tags": [
+          "User"
+        ],
+        "summary": "修改资料",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserProfileUpdateReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/user/me/password": {
       "put": {
-        "tags": ["User"], "summary": "修改密码（成功后服务端失效所有 token）",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserPasswordUpdateReq" } } } },
-        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Result" } } } } }
+        "tags": [
+          "User"
+        ],
+        "summary": "修改密码（成功后服务端失效所有 token）",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPasswordUpdateReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/user/goal": {
       "get": {
-        "tags": ["User"], "summary": "查看我的目标",
+        "tags": [
+          "User"
+        ],
+        "summary": "查看我的目标",
         "responses": {
-          "200": { "description": "UserGoalVO",
-            "content": { "application/json": { "schema": { "allOf": [{ "$ref": "#/components/schemas/Result" },
-              { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/UserGoalVO" } } }] } } } }
-        }
+          "200": {
+            "description": "UserGoalVO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/UserGoalVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       },
       "put": {
-        "tags": ["User"], "summary": "修改我的目标",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserGoalUpdateReq" } } } },
-        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Result" } } } } }
-      }
-    }
-  },
-  "components": {
-    "parameters": {
-      "pageNum": {
-        "name": "pageNum", "in": "query", "required": false,
-        "schema": { "type": "integer", "format": "int32", "default": 1, "minimum": 1 }
-      },
-      "pageSize": {
-        "name": "pageSize", "in": "query", "required": false,
-        "schema": { "type": "integer", "format": "int32", "default": 20, "minimum": 1, "maximum": 100 }
-      },
-      "pathId": {
-        "name": "id", "in": "path", "required": true,
-        "schema": { "type": "integer", "format": "int64", "minimum": 1 }
+        "tags": [
+          "User"
+        ],
+        "summary": "修改我的目标",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserGoalUpdateReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
-    "securitySchemes": {
-      "BearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "description": "POST /auth/login 获取 accessToken。Authorization: Bearer {token}"
+    "/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "注册（QQ邮箱，username后端自动生成）",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功(data=null)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                },
+                "example": {
+                  "code": 0,
+                  "message": "success",
+                  "data": null,
+                  "timestamp": 1755410000000
+                }
+              }
+            }
+          }
+        }
       }
     },
-    "schemas": {
-      "Result": {
-        "type": "object",
-        "required": ["code", "message", "timestamp"],
-        "properties": {
-          "code": { "type": "integer", "format": "int32", "example": 0 },
-          "message": { "type": "string", "example": "success" },
-          "data": { "nullable": true },
-          "timestamp": { "type": "integer", "format": "int64", "example": 1755410000000 }
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "登录（type=1密码 / type=2验证码）",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功，返回 Token 对 + 用户信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/LoginUserVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
         }
-      },
-      "Page": {
-        "type": "object",
-        "required": ["total", "pageNum", "pageSize", "pages", "list"],
-        "properties": {
-          "total": { "type": "integer", "format": "int64" },
-          "pageNum": { "type": "integer", "format": "int32" },
-          "pageSize": { "type": "integer", "format": "int32" },
-          "pages": { "type": "integer", "format": "int32" },
-          "list": { "type": "array", "items": {} }
+      }
+    },
+    "/auth/login/send-code": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "发送验证码到QQ邮箱（6位数字，5min有效）",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendCodeReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "发送成功(data=null)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                },
+                "example": {
+                  "code": 0,
+                  "message": "success",
+                  "data": null,
+                  "timestamp": 1755410000000
+                }
+              }
+            }
+          }
         }
-      },
-      "LoginUserVO": {
-        "type": "object",
-        "properties": {
-          "accessToken":  { "type": "string" },
-          "refreshToken": { "type": "string" },
-          "userId":       { "type": "integer", "format": "int64" },
-          "username":     { "type": "string" }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "刷新 Token 对（用 refreshToken，旋转失效旧的）",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "新 Token 对",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/LoginUserVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
         }
-      },
-      "TrainingOverview": {
-        "type": "object",
-        "properties": {
-          "totalWorkoutsThisWeek": { "type": "integer", "format": "int32" },
-          "totalVolumeThisWeek":   { "type": "number", "description": "【B】本周容量 kg" },
-          "totalSetsThisWeek":     { "type": "integer", "format": "int32", "description": "【B】组数" },
-          "totalRepsThisWeek":     { "type": "integer", "format": "int32", "description": "【B】次数" },
-          "completionRate7d":      { "type": "number", "description": "【C】7日完成率%" },
-          "streakDays":            { "type": "integer", "format": "int32", "description": "【C】连续天数" },
-          "totalPlans":            { "type": "integer", "format": "int32" },
-          "weeklyVolumeTrend":     { "type": "array", "description": "【C】近7天", "items": {
-            "type": "object",
-            "properties": {
-              "date":   { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
-              "volume": { "type": "number" },
-              "sets":   { "type": "integer", "format": "int32" }
-            } } }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "登出（失效当前用户 token 缓存）",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          }
         }
-      },
-      "HealthOverview": {
-        "type": "object",
-        "properties": {
-          "latestWeight":    { "type": "number", "nullable": true, "description": "【A】最新体重 kg" },
-          "latestBodyFat":   { "type": "number", "nullable": true, "description": "【A】最新体脂率%" },
-          "weightTrend30d":  { "type": "array", "description": "【A】30天体重", "items": {
-            "type": "object",
-            "properties": {
-              "date":  { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
-              "value": { "type": "number" }
-            } } },
-          "caloriesToday":   { "type": "number", "description": "【B】今日 kcal" },
-          "waterTodayMl":    { "type": "integer", "format": "int32", "description": "【B】今日饮水 ml" },
-          "waterGoalMl":     { "type": "integer", "format": "int32", "description": "【B】饮水目标 ml" },
-          "proteinTodayG":   { "type": "number" },
-          "caloriesLast7d":  { "type": "array", "description": "【B】近7天摄入", "items": {
-            "type": "object",
-            "properties": {
-              "date":  { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
-              "value": { "type": "number" }
-            } } }
-        }
-      },
-      "ExerciseVO": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer", "format": "int64" },
-          "name": { "type": "string" },
-          "category": { "type": "integer", "format": "int32" },
-          "categoryName": { "type": "string" },
-          "difficulty": { "type": "integer", "format": "int32" },
-          "muscleGroup": { "type": "string", "nullable": true },
-          "description": { "type": "string", "nullable": true },
-          "imageUrl": { "type": "string", "nullable": true },
-          "systemBuilt": { "type": "boolean" },
-          "createdAt": { "type": "string", "format": "date-time" }
-        }
-      },
-      "ExerciseSaveReq": {
-        "type": "object",
-        "required": ["name","category","difficulty"],
-        "properties": {
-          "name": { "type": "string", "minLength": 1, "maxLength": 50 },
-          "category": { "type": "integer", "format": "int32", "minimum": 1, "maximum": 8 },
-          "difficulty": { "type": "integer", "format": "int32", "minimum": 1, "maximum": 3 },
-          "muscleGroup": { "type": "string", "maxLength": 50, "nullable": true },
-          "description": { "type": "string", "maxLength": 500, "nullable": true },
-          "imageResourceId": { "type": "integer", "format": "int64", "nullable": true }
-        }
-      },
-      "PlanSaveReq": {
-        "type": "object",
-        "required": ["name","exercises"],
-        "properties": {
-          "name": { "type": "string", "minLength": 1, "maxLength": 50 },
-          "description": { "type": "string", "maxLength": 500, "nullable": true },
-          "daysPerWeek": { "type": "integer", "format": "int32", "minimum": 1, "maximum": 7, "nullable": true },
-          "exercises": { "type": "array", "items": {
-            "type": "object",
-            "required": ["exerciseId","sortOrder","defaultSets","defaultReps"],
-            "properties": {
-              "exerciseId": { "type": "integer", "format": "int64" },
-              "sortOrder": { "type": "integer", "format": "int32" },
-              "defaultSets": { "type": "integer", "format": "int32", "minimum": 1 },
-              "defaultReps": { "type": "integer", "format": "int32", "minimum": 1 },
-              "defaultWeightKg": { "type": "number", "nullable": true }
-            } } }
-        }
-      },
-      "PlanVO": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer", "format": "int64" },
-          "name": { "type": "string" },
-          "description": { "type": "string", "nullable": true },
-          "daysPerWeek": { "type": "integer", "format": "int32", "nullable": true },
-          "exerciseCount": { "type": "integer", "format": "int32" },
-          "createdAt": { "type": "string", "format": "date-time" }
-        }
-      },
-      "WorkoutRecordSubmitReq": {
-        "type": "object",
-        "required": ["trainedAt","durationMin","sets"],
-        "properties": {
-          "planId": { "type": "integer", "format": "int64", "nullable": true },
-          "trainedAt": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$" },
-          "durationMin": { "type": "integer", "format": "int32", "minimum": 1 },
-          "notes": { "type": "string", "maxLength": 500, "nullable": true },
-          "sets": { "type": "array", "items": {
-            "type": "object",
-            "required": ["exerciseId","setNo","weightKg","reps"],
-            "properties": {
-              "exerciseId": { "type": "integer", "format": "int64" },
-              "setNo": { "type": "integer", "format": "int32", "minimum": 1 },
-              "weightKg": { "type": "number", "minimum": 0 },
-              "reps": { "type": "integer", "format": "int32", "minimum": 1 },
-              "rpe": { "type": "integer", "format": "int32", "nullable": true, "minimum": 1, "maximum": 10 }
-            } } }
-        }
-      },
-      "RecordSummaryVO": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer", "format": "int64" },
-          "totalVolume": { "type": "number" },
-          "totalSets": { "type": "integer", "format": "int32" },
-          "totalReps": { "type": "integer", "format": "int32" }
-        }
-      },
-      "RecordListItemVO": {
-        "allOf": [
-          { "$ref": "#/components/schemas/RecordSummaryVO" },
-          { "type": "object", "properties": {
-            "trainedAt": { "type": "string" },
-            "planName": { "type": "string", "nullable": true },
-            "durationMin": { "type": "integer", "format": "int32" }
-          } }
-        ]
-      },
-      "BodyMetricSaveReq": {
-        "type": "object",
-        "required": ["metricType","value","measuredAt"],
-        "properties": {
-          "metricType": { "type": "integer", "format": "int32" },
-          "value": { "type": "number", "exclusiveMinimum": 0 },
-          "unit": { "type": "string", "maxLength": 10, "nullable": true },
-          "measuredAt": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$" },
-          "note": { "type": "string", "maxLength": 100, "nullable": true }
-        }
-      },
-      "BodyMetricVO": {
-        "allOf": [
-          { "$ref": "#/components/schemas/BodyMetricSaveReq" },
-          { "type": "object", "properties": {
-            "id": { "type": "integer", "format": "int64" },
-            "createdAt": { "type": "string", "format": "date-time" }
-          } }
-        ]
-      },
-      "FoodVO": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer", "format": "int64" },
-          "name": { "type": "string" },
-          "category": { "type": "integer", "format": "int32" },
-          "serving": { "type": "string", "nullable": true },
-          "kcalPer100g": { "type": "number" },
-          "proteinG": { "type": "number", "nullable": true },
-          "carbG": { "type": "number", "nullable": true },
-          "fatG": { "type": "number", "nullable": true },
-          "imageUrl": { "type": "string", "nullable": true },
-          "systemBuilt": { "type": "boolean" }
-        }
-      },
-      "MealSaveReq": {
-        "type": "object",
-        "required": ["mealType","ateAt","items"],
-        "properties": {
-          "mealType": { "type": "integer", "format": "int32" },
-          "ateAt": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$" },
-          "items": { "type": "array", "items": {
-            "type": "object",
-            "required": ["qtyG","kcal"],
-            "properties": {
-              "foodId": { "type": "integer", "format": "int64", "nullable": true },
-              "foodName": { "type": "string", "nullable": true },
-              "qtyG": { "type": "number", "minimum": 0 },
-              "kcal": { "type": "number", "minimum": 0 },
-              "proteinG": { "type": "number", "nullable": true },
-              "carbG": { "type": "number", "nullable": true },
-              "fatG": { "type": "number", "nullable": true }
-            } } },
-          "imageResourceId": { "type": "integer", "format": "int64", "nullable": true },
-          "note": { "type": "string", "maxLength": 200, "nullable": true }
-        }
-      },
-      "MealVO": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer", "format": "int64" },
-          "mealType": { "type": "integer", "format": "int32" },
-          "ateAt": { "type": "string" },
-          "totalKcal": { "type": "number" },
-          "totalProteinG": { "type": "number" },
-          "note": { "type": "string", "nullable": true },
-          "imageUrl": { "type": "string", "nullable": true },
-          "itemCount": { "type": "integer", "format": "int32" }
-        }
-      },
-      "WaterSaveReq": {
-        "type": "object",
-        "required": ["ml"],
-        "properties": {
-          "ml": { "type": "integer", "format": "int32", "minimum": 1 },
-          "drankAt": { "type": "string", "nullable": true, "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$" }
-        }
-      },
-      "WaterVO": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer", "format": "int64" },
-          "ml": { "type": "integer", "format": "int32" },
-          "drankAt": { "type": "string" }
-        }
-      },
-      "WaterTodayVO": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer", "format": "int64" },
-          "todayTotalMl": { "type": "integer", "format": "int32" }
-        }
-      },
-      "FileUploadVO": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer", "format": "int64" },
-          "fileUrl": { "type": "string" }
-        }
-      },
-      "AiChatReq": {
-        "type": "object",
-        "required": ["message"],
-        "properties": {
-          "message": { "type": "string", "minLength": 1, "maxLength": 2000 },
-          "conversationId": { "type": "string", "nullable": true }
-        }
-      },
-      "AiChatVO": {
-        "type": "object",
-        "properties": {
-          "reply": { "type": "string" },
-          "conversationId": { "type": "string" }
-        }
-      },
-      "AiPlanAdviseReq": {
-        "type": "object",
-        "required": ["goalType","daysPerWeek","equipmentAvailable"],
-        "properties": {
-          "goalType": { "type": "integer", "format": "int32" },
-          "daysPerWeek": { "type": "integer", "format": "int32", "minimum": 1, "maximum": 7 },
-          "equipmentAvailable": { "type": "array", "items": { "type": "string" } }
-        }
-      },
-      "AiMealAdviseReq": {
-        "type": "object",
-        "required": ["todayKcalTarget","goalType"],
-        "properties": {
-          "todayKcalTarget": { "type": "integer", "format": "int32", "minimum": 1 },
-          "goalType": { "type": "integer", "format": "int32" }
-        }
-      },
-      "MarkdownVO": {
-        "type": "object",
-        "properties": { "markdown": { "type": "string" } }
-      },
-      "UserGoalVO": {
-        "type": "object",
-        "properties": {
-          "goalType": { "type": "integer", "format": "int32" },
-          "targetWeightKg": { "type": "number", "nullable": true },
-          "weeklyWorkoutDays": { "type": "integer", "format": "int32", "nullable": true },
-          "kcalTarget": { "type": "integer", "format": "int32", "nullable": true },
-          "waterGoalMl": { "type": "integer", "format": "int32", "nullable": true }
-        }
-      },
-      "UserMeVO": {
-        "type": "object",
-        "properties": {
-          "userId": { "type": "integer", "format": "int64" },
-          "username": { "type": "string" },
-          "email": { "type": "string", "nullable": true },
-          "nickname": { "type": "string", "nullable": true },
-          "avatarUrl": { "type": "string", "nullable": true },
-          "gender": { "type": "integer", "format": "int32", "nullable": true },
-          "heightCm": { "type": "number", "nullable": true },
-          "birthday": { "type": "string", "nullable": true, "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
-          "registeredAt": { "type": "string", "format": "date-time" },
-          "goal": { "nullable": true, "allOf": [{ "$ref": "#/components/schemas/UserGoalVO" }] }
-        }
-      },
-      "UserProfileUpdateReq": {
-        "type": "object",
-        "properties": {
-          "nickname": { "type": "string", "maxLength": 50, "nullable": true },
-          "avatarResourceId": { "type": "integer", "format": "int64", "nullable": true },
-          "gender": { "type": "integer", "format": "int32", "nullable": true },
-          "heightCm": { "type": "number", "nullable": true },
-          "birthday": { "type": "string", "nullable": true, "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
-          "email": { "type": "string", "format": "email", "nullable": true }
-        }
-      },
-      "UserPasswordUpdateReq": {
-        "type": "object",
-        "required": ["oldPassword","newPassword"],
-        "properties": {
-          "oldPassword": { "type": "string" },
-          "newPassword": { "type": "string", "minLength": 8, "maxLength": 64 }
-        }
-      },
-      "UserGoalUpdateReq": {
-        "type": "object",
-        "required": ["goalType"],
-        "properties": {
-          "goalType": { "type": "integer", "format": "int32" },
-          "targetWeightKg": { "type": "number", "nullable": true },
-          "weeklyWorkoutDays": { "type": "integer", "format": "int32", "minimum": 1, "maximum": 7, "nullable": true },
-          "kcalTarget": { "type": "integer", "format": "int32", "minimum": 1, "nullable": true },
-          "waterGoalMl": { "type": "integer", "format": "int32", "minimum": 1, "nullable": true }
-        }
-      },
-      "IdVO": {
-        "type": "object",
-        "properties": { "id": { "type": "integer", "format": "int64" } }
       }
     }
   }
