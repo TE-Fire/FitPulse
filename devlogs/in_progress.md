@@ -390,3 +390,37 @@ com.fitpulse.app/
 
 ### 17.4 编译验证
 `mvn compile` BUILD SUCCESS（JDK 21 / 29 个源文件 / 17.1s）
+
+---
+
+## 18. P1-6 AuthController 落地（5 个接口，完整链路贯通）
+
+### 18.1 文件位置
+`auth/controller/AuthController.java`
+- `@RestController` + `@RequestMapping("/api/v1/auth")` + `@RequiredArgsConstructor`
+- 依赖：`AuthService`
+
+### 18.2 接口清单（与 SecurityConfig 白名单对齐）
+
+| HTTP | 路径 | 鉴权 | 参数 (@Valid @RequestBody) | 返回 | 说明 |
+|---|---|---|---|---|---|
+| POST | `/register` | permitAll | `RegisterReq` | `Result<Void>` | 注册成功无返回体 |
+| POST | `/login` | permitAll | `LoginReq` | `Result<LoginUserVO>` | 密码/验证码统一入口 |
+| POST | `/login/send-code` | permitAll | `SendCodeReq` | `Result<Void>` | 60s 防刷在 Service 内 |
+| POST | `/refresh` | permitAll | `RefreshReq` | `Result<LoginUserVO>` | refreshToken 旋转 |
+| POST | `/logout` | authenticated | 无（从 CurrentUser 取） | `Result<Void>` | 删 Redis refreshToken |
+
+### 18.3 关键设计
+- **登出取 userId**：`CurrentUser.getUserId()` 读取 SecurityContext 的 principal（JwtAuthFilter 写入的 Long userId），若 Context 为空 → anyRequest().authenticated() 已在过滤器链拦截返回 401（所以 controller 内不需要再判空兜底，但 `authService.logout(null)` 内部也做了 null 安全）
+- **全链路 @Valid**：请求 DTO 的 Jakarta Validation 注解（@NotBlank/@Pattern/@Size/@Email/@NotNull）全部生效，校验失败自动触发 `GlobalExceptionHandler.handleValidation`（返回 `Result.fail(PARAM_ERROR, message)`）
+- **返回统一 Result**：成功 `Result.success()` 或 `Result.success(data)`，失败由 Service 抛 BusinessException → GlobalExceptionHandler 统一包裹 Result
+
+### 18.4 编译验证
+`mvn compile` BUILD SUCCESS（JDK 21 / 30 个源文件 / 16.1s）
+
+---
+
+## P1 阶段完成总结（截至第 18 节）
+
+**Auth 模块 5 接口已全部可编译**：注册 → 发送验证码 → 登录（密码/验证码）→ 刷新 → 登出。
+**运行前置条件**：MySQL 建 user 表、Redis 在线、（可选）邮件配置凭据填 application.yml。后续可本地启动后用 ApiFox 按文档链路验证。
