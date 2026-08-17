@@ -1,4 +1,4 @@
-﻿# FitPulse 开发工作记录（进行中）
+# FitPulse 开发工作记录（进行中）
 
 > 会话日期：2026-08-17
 > 当前状态：进行中
@@ -156,3 +156,36 @@
 
 ### 8.4 下一会话
 等待用户指示按模块逐步重建后端 Java 代码
+
+---
+
+## 9. P0 启动阻塞项落地（2026-08-17 新会话）
+
+### 9.1 pom.xml 补充依赖
+- 追加 `spring-boot-starter-mail`（位置：Redis 之后、MinIO 之前）
+
+### 9.2 application.yml 两处修正
+- JWT access 过期时间：`10080`（7天）→ `1440`（24小时，与接口文档 1.4 节对齐）
+- 新增 `fitpulse.mail` 配置块：QQ SMTP（smtp.qq.com:465），用户名/密码留空待填，无凭据时 MailService 仅日志不报错
+
+### 9.3 common 模块基础代码（共 14 个 Java 文件）
+
+| 包 | 文件 | 说明 |
+|---|---|---|
+| 根 | FitnessApplication.java | 启动类：@SpringBootApplication + @EnableAsync + @ConfigurationPropertiesScan + @MapperScan |
+| common/result | IErrorCode.java | 错误码接口 |
+| common/result | ResultCode.java | 枚举：SUCCESS/PARAM_ERROR/UNAUTHORIZED/FORBIDDEN/NOT_FOUND/CONFLICT/INTERNAL_ERROR |
+| common/result | Result.java | 统一响应包裹：code/message/data/timestamp |
+| common/result | PageResult.java | 分页结构：total/pageNum/pageSize/pages/list |
+| common/exception | BaseException.java | 基础异常，实现 IErrorCode |
+| common/exception | BusinessException.java | 业务异常，继承 BaseException |
+| common/exception | GlobalExceptionHandler.java | @RestControllerAdvice：处理 BusinessException/ValidationException/AuthException/兜底 Exception |
+| common/enums | LoginTypeEnum.java | PASSWORD(1)/VERIFY_CODE(2)，fromCode 静态方法 |
+| common/constants | RedisKeyConstants.java | fitpulse: 前缀 + buildKey 工具方法 |
+| common/config | RedisConfig.java | Jackson2JsonRedisSerializer 序列化配置 |
+| common/config | MyBatisPlusConfig.java | MetaObjectHandler 自动填充 createdAt/updatedAt |
+| common/config | MailProperties.java | @ConfigurationProperties(prefix="fitpulse.mail")，isConfigured() 判断 |
+| common/mail | MailService.java | 邮件发送，无凭据仅日志不报错，SSL 465 端口 |
+
+### 9.4 下一步
+准备执行 P1：Auth 鉴权模块（实体+Mapper+JWT+Security+Controller）

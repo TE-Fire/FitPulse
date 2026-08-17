@@ -1,4 +1,4 @@
-﻿server:
+server:
   port: 8080
   servlet:
     context-path: /
@@ -82,7 +82,7 @@ mybatis-plus:
 fitpulse:
   jwt:
     secret: "FitPulse@2026!SecretKey_MakeItLongEnough_Over256Bits_ForHS256"
-    access-expire-minutes: 10080   # 7天
+    access-expire-minutes: 1440    # 24小时
     refresh-expire-minutes: 43200  # 30天
     header: Authorization
     prefix: "Bearer "
@@ -95,6 +95,17 @@ fitpulse:
     bucket: fitpulse-assets
     # 访问前缀：如果 MinIO 反代或 CDN，填外部地址
     public-base-url: http://127.0.0.1:9000/fitpulse-assets
+
+  # ============ 邮件配置（QQ SMTP） ============
+  mail:
+    smtp-host: smtp.qq.com
+    smtp-port: 465
+    username: 
+    password: 
+    encoding: UTF-8
+    timeout: 5000
+    sender-name: FitPulse
+    # 无凭据时 MailService 仅日志提示不抛错
 
   # ============ AI 提示词模板 ============
   ai:
