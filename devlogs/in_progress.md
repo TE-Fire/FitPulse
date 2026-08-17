@@ -659,4 +659,42 @@ autoconfigure:
 | POST | /refresh | 否 | refreshToken旋转 |
 | POST | /logout | 是 | 删Redis refreshToken |
 
-### 25.9 待编译验证（第8节步骤8执行 mvn compile）
+### 25.9 编译验证
+`mvn -q -DskipTests compile` exit 0 ✅
+
+---
+
+## 26. 修复 JDBC URL `characterEncoding=utf8mb4` → HikariPool 初始化失败（UnsupportedEncodingException）
+
+### 26.1 报错堆栈定位
+```
+java.sql.SQLException: Unsupported character encoding 'utf8mb4'
+  at com.mysql.cj.jdbc.ConnectionImpl.<init>(ConnectionImpl.java:434)
+  ...
+Caused by: java.io.UnsupportedEncodingException: utf8mb4
+  at java.base/java.lang.String.lookupCharset(String.java:861)
+  at com.mysql.cj.util.StringUtils.getBytes(StringUtils.java:235)
+```
+触发路径：调用 `AuthServiceImpl.registerSendCode → UserMapper.selectCount` → MyBatis SpringManagedTransaction 开连接 → HikariPool `checkFailFast` 初始化 pool。
+
+### 26.2 为什么错
+- **`utf8mb4` 是 MySQL 服务端字符集名**（在 DDL / `SET NAMES utf8mb4` / `connectionCollation` 这样的 MySQL 参数里合法）
+- **JDBC `characterEncoding=` 参数传的是 Java `Charset` 名**，Java 自带 charset 表里只有 `UTF-8`、`UTF8`、`US-ASCII` 等，没有 `utf8mb4`。
+- 驱动最终走 `String.getBytes(name)` → `Charset.forName(name)` → `String.lookupCharset("utf8mb4")` 直接 `UnsupportedEncodingException`。
+
+### 26.3 修复（演示模板 application-demo.yml）
+```yaml
+# 修复前：
+url: jdbc:mysql://...fitpulse_db?useUnicode=true&characterEncoding=utf8mb4&...
+
+# 修复后：
+url: jdbc:mysql://...fitpulse_db?useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&...
+```
+- `characterEncoding=UTF-8`：Java 端传输字节使用 UTF-8（MySQL Connector/J 识别后会告诉 MySQL `SET NAMES utf8mb4`，因为 UTF-8 映射到 MySQL 的 utf8mb4，不用担心中文 emoji 存不下）
+- `connectionCollation=utf8mb4_unicode_ci`：显式告诉 MySQL 连接排序规则对齐 DDL（schema.sql 表 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci），避免 fallback 到数据库默认 collation 不一致导致比较/唯一索引行为差异。
+
+### 26.4 ⚠️ 你本地必须同步改（gitignore 中的 application-dev.yml）
+演示模板在资源目录下，但你的启动报错来自**实际激活的 profile=dev**，即 `application-dev.yml`（被 `.gitignore` 忽略，仓库里看不到）。它里面的 JDBC URL 必然也写了 `characterEncoding=utf8mb4`，否则堆栈不会抛错。
+
+请把本地 `application-dev.yml` 中 `spring.datasource.url` 这一行按 26.3 的修复改完，然后重启 FitnessApplication 即可。改完后 register/send-code 会走到 HikariPool 初始化成功 → 成功查询 user 表 + 写 Redis 验证码。
+
