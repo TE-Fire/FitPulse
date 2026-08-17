@@ -25,4 +25,8 @@ public class RegisterReq {
             message = "密码需同时包含字母和数字"
     )
     private String password;
+
+    @NotBlank(message = "注册验证码不能为空")
+    @Pattern(regexp = "^\\d{6}$", message = "注册验证码应为6位数字")
+    private String code;
 }

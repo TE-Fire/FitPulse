@@ -38,6 +38,7 @@ public class SecurityConfig {
     /** Auth 公开接口白名单（不需要登录即可访问） */
     private static final String[] WHITELIST = {
             "/api/v1/auth/register",
+            "/api/v1/auth/register/send-code",
             "/api/v1/auth/login",
             "/api/v1/auth/login/send-code",
             "/api/v1/auth/refresh",

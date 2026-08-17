@@ -3,6 +3,7 @@ package com.fitpulse.app.auth.service;
 import com.fitpulse.app.auth.dto.req.LoginReq;
 import com.fitpulse.app.auth.dto.req.RefreshReq;
 import com.fitpulse.app.auth.dto.req.RegisterReq;
+import com.fitpulse.app.auth.dto.req.RegisterSendCodeReq;
 import com.fitpulse.app.auth.dto.req.SendCodeReq;
 import com.fitpulse.app.auth.dto.vo.LoginUserVO;
 
@@ -13,9 +14,14 @@ import com.fitpulse.app.auth.dto.vo.LoginUserVO;
 public interface AuthService {
 
     /**
-     * 用户注册（仅创建 user 记录，不自动登录）。
+     * 用户注册（校验注册验证码后创建 user 记录，不自动登录）。
      */
     void register(RegisterReq req);
+
+    /**
+     * 发送 6 位注册验证码到 QQ 邮箱（60s 内防刷，key 前缀与登录验证码完全隔离）。
+     */
+    void registerSendCode(RegisterSendCodeReq req);
 
     /**
      * 登录：type=1 密码登录 / type=2 验证码登录。

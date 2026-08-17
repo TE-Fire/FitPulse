@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fitpulse.app.auth.dto.req.LoginReq;
 import com.fitpulse.app.auth.dto.req.RefreshReq;
 import com.fitpulse.app.auth.dto.req.RegisterReq;
+import com.fitpulse.app.auth.dto.req.RegisterSendCodeReq;
 import com.fitpulse.app.auth.dto.req.SendCodeReq;
 import com.fitpulse.app.auth.dto.vo.LoginUserVO;
 import com.fitpulse.app.auth.enums.AuthErrorCode;
@@ -53,6 +54,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void register(RegisterReq req) {
         String email = req.getEmail();
+        String code = req.getCode();
+
+        // 0. 校验注册验证码（空/格式/过期/错误四场景分别对应专属枚举）
+        verifyRegisterCodeAndConsume(email, code);
 
         // 1. 邮箱唯一检查
         Long exist = userMapper.selectCount(
@@ -163,7 +168,67 @@ public class AuthServiceImpl implements AuthService {
         redisTemplate.delete(key);
     }
 
+    private void verifyRegisterCodeAndConsume(String email, String code) {
+        if (!StringUtils.hasText(code)) {
+            throw new BusinessException(AuthErrorCode.REGISTER_CODE_EMPTY);
+        }
+        if (!code.matches("^\\d{6}$")) {
+            throw new BusinessException(AuthErrorCode.REGISTER_CODE_FORMAT_ERROR);
+        }
+        String key = RedisKeyConstants.buildRegisterCodeKey(email);
+        Object stored = redisTemplate.opsForValue().get(key);
+        if (stored == null) {
+            throw new BusinessException(AuthErrorCode.REGISTER_CODE_EXPIRED);
+        }
+        if (!code.equals(String.valueOf(stored))) {
+            throw new BusinessException(AuthErrorCode.REGISTER_CODE_ERROR);
+        }
+        redisTemplate.delete(key);
+    }
+
     // ============================== 发送验证码 ==============================
+
+    @Override
+    public void registerSendCode(RegisterSendCodeReq req) {
+        String email = req.getEmail();
+
+        // 1. 注册场景：若邮箱已注册，拒绝发送（让攻击者无法枚举哪些邮箱已注册？这里返回失败属于安全取舍）
+        Long exist = userMapper.selectCount(
+                new LambdaQueryWrapper<User>().eq(User::getEmail, email)
+        );
+        if (exist != null && exist > 0) {
+            throw new BusinessException(AuthErrorCode.EMAIL_ALREADY_REGISTERED);
+        }
+
+        // 2. 60 秒防刷（key 前缀与登录防刷完全隔离）
+        String rateKey = RedisKeyConstants.buildRegisterCodeKey(email) + ":rate";
+        Boolean rateExisted = redisTemplate.hasKey(rateKey);
+        if (Boolean.TRUE.equals(rateExisted)) {
+            throw new BusinessException(AuthErrorCode.REGISTER_SEND_CODE_TOO_FREQUENT);
+        }
+
+        // 3. 生成 6 位验证码（首位非零）
+        String code = String.valueOf((int) ((Math.random() * 9 + 1) * 100_000));
+
+        // 4. 存 Redis：注册验证码独立前缀
+        redisTemplate.opsForValue().set(
+                RedisKeyConstants.buildRegisterCodeKey(email),
+                code,
+                CODE_EXPIRE_MIN,
+                TimeUnit.MINUTES
+        );
+        redisTemplate.opsForValue().set(rateKey, "1", CODE_RATE_LIMIT_SEC, TimeUnit.SECONDS);
+
+        // 5. 开发期日志输出
+        log.info("[注册验证码] email={}, code={}", email, code);
+
+        // 6. 邮件发送：注册场景专属主题
+        String content = String.format(
+                "您的 FitPulse 注册验证码是：%s，5 分钟内有效，请勿泄露给他人。",
+                code
+        );
+        mailService.sendMail(email, "FitPulse 注册验证码", content);
+    }
 
     @Override
     public void sendCode(SendCodeReq req) {

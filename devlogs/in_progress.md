@@ -606,3 +606,57 @@ autoconfigure:
     - org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration
 ```
 > 后续开发 AI 模块时：从 exclude 列表移除 OpenAiAutoConfiguration 行，在 application-dev.yml 填真实 `spring.ai.openai.api-key` 即可。
+
+---
+
+## 25. 注册流程新增验证码（契约+代码+配置全链路）
+
+### 25.1 需求背景
+此前 `/auth/register` 接口仅校验 email+password 即可注册，与登录流程（必须带验证码）不对称，存在"机器人批量注册"风险。按用户要求，**注册也必须先走发码→再带 code 注册**，且注册验证码与登录验证码在 Redis key 前缀上完全隔离，避免混淆与互用。
+
+### 25.2 契约更新（docs/设计契约.md 6.1 节）
+- 原 `/auth/register` 请求体 `{email, password}` → **新增 `code` 字段**（6位数字注册验证码）
+- **新增接口** `/auth/register/send-code`：POST，免鉴权，请求 `{email(@qq.com)}`，响应 null
+- `/auth/login/send-code` 备注补充：与注册验证码前缀完全隔离（明确两个场景互不相通）
+
+### 25.3 RedisKeyConstants（注册独立前缀）
+- 新增常量 `REGISTER_CODE = "fitpulse:register:code:%s"`
+- 新增静态方法 `buildRegisterCodeKey(String email)`
+- 登录验证码仍走 `fitpulse:login:code:%s`，两者物理隔离
+
+### 25.4 AuthErrorCode 新增 5 个注册场景专属枚举
+| 枚举 | code | 场景 |
+|---|---|---|
+| REGISTER_SEND_CODE_TOO_FREQUENT | 409 | 注册验证码60秒防刷 |
+| REGISTER_CODE_EMPTY | 400 | register请求中验证码为空 |
+| REGISTER_CODE_FORMAT_ERROR | 400 | register请求中验证码非6位数字 |
+| REGISTER_CODE_EXPIRED | 401 | Redis中注册验证码已过期/不存在 |
+| REGISTER_CODE_ERROR | 401 | 用户输入注册验证码与Redis不一致 |
+登录原有的 SEND_CODE_TOO_FREQUENT / CODE_EXPIRED / CODE_ERROR 文案改为精确标注"登录场景"，避免两套枚举语义混淆。
+
+### 25.5 DTO 调整（2处）
+- **RegisterReq**：新增字段 `code`，加 `@NotBlank` + `@Pattern(^\d{6}$)`（后端兜底校验，与Service层精确抛枚举双重保障）
+- **新增 RegisterSendCodeReq**：`auth/dto/req/RegisterSendCodeReq.java`，email `@NotBlank @Email @Pattern(.+@qq\.com$)`
+
+### 25.6 Service 接口与实现
+- **AuthService**：新增 `void registerSendCode(RegisterSendCodeReq req)` 方法声明
+- **AuthServiceImpl**：
+  1. `registerSendCode` 实现：先查 user 表邮箱已注册则直接拒（EMAIL_ALREADY_REGISTERED）→ 60s 防刷（rate key 用 register 前缀）→ 生成6位码 → Redis 双写（code 5min + rate 60s）→ 日志输出 → 邮件发送主题为"FitPulse 注册验证码"
+  2. `register` 改造：最**先**走新私有方法 `verifyRegisterCodeAndConsume(email, code)`（空/格式/过期/错误四分支分别对应 REGISTER_CODE_* 四枚举，成功后 delete Redis key 一次性消费）→ 然后才做邮箱唯一检查+写user
+  3. 新增私有 `verifyRegisterCodeAndConsume`，与登录 `verifyCodeAndConsume` 完全隔离（key前缀/异常枚举均不同）
+
+### 25.7 Controller + SecurityConfig 白名单
+- **AuthController**：新增 `POST /register/send-code` 端点，`@Valid RegisterSendCodeReq` → `authService.registerSendCode(req)`
+- **SecurityConfig WHITELIST**：追加 `/api/v1/auth/register/send-code` 到 permitAll（否则匿名请求会被 401 拦截）
+
+### 25.8 最终接口清单（Auth模块 6 条）
+| 方法 | 路径 | 鉴权 | 关键说明 |
+|---|---|---|---|
+| POST | /register/send-code | 否 | 发注册码，邮箱已注册直接拒，60s防刷 |
+| POST | /register | 否 | 必须带正确注册码，成功即消费删除 |
+| POST | /login/send-code | 否 | 发登录码，独立Redis前缀 |
+| POST | /login | 否 | type=1密码 / type=2验证码 |
+| POST | /refresh | 否 | refreshToken旋转 |
+| POST | /logout | 是 | 删Redis refreshToken |
+
+### 25.9 待编译验证（第8节步骤8执行 mvn compile）

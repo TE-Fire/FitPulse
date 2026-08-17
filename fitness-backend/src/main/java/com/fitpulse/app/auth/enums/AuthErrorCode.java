@@ -18,8 +18,10 @@ public enum AuthErrorCode implements BaseExceptionInterface {
     // ========== 409 冲突类 ==========
     /** 邮箱已注册 */
     EMAIL_ALREADY_REGISTERED("409", "邮箱已注册"),
-    /** 验证码 60 秒发送过于频繁 */
+    /** 登录验证码 60 秒发送过于频繁 */
     SEND_CODE_TOO_FREQUENT("409", "发送过于频繁，请60秒后再试"),
+    /** 注册验证码 60 秒发送过于频繁 */
+    REGISTER_SEND_CODE_TOO_FREQUENT("409", "注册验证码发送过于频繁，请60秒后再试"),
 
     // ========== 400 参数类 ==========
     /** 登录 type 非法（既不是 1 密码，也不是 2 验证码） */
@@ -28,16 +30,24 @@ public enum AuthErrorCode implements BaseExceptionInterface {
     PASSWORD_EMPTY("400", "密码不能为空"),
     /** 验证码登录分支中验证码格式不对（非 6 位数字） */
     CODE_FORMAT_ERROR("400", "验证码格式不正确"),
+    /** 注册请求中注册验证码为空 */
+    REGISTER_CODE_EMPTY("400", "注册验证码不能为空"),
+    /** 注册请求中注册验证码格式不对（非 6 位数字） */
+    REGISTER_CODE_FORMAT_ERROR("400", "注册验证码应为6位数字"),
     /** refresh 接口提交的 token type 不是 refresh */
     NOT_REFRESH_TOKEN("400", "不是有效的refreshToken"),
 
     // ========== 401 未认证类 ==========
     /** 登录时邮箱不存在 / 被禁用 / 密码错误（统一提示防枚举攻击） */
     EMAIL_OR_PASSWORD_ERROR("401", "邮箱或密码错误"),
-    /** Redis 中验证码已过期（5 分钟或不存在） */
+    /** Redis 中登录验证码已过期（5 分钟或不存在） */
     CODE_EXPIRED("401", "验证码已过期"),
-    /** 用户输入验证码与 Redis 中不一致 */
+    /** 用户输入登录验证码与 Redis 中不一致 */
     CODE_ERROR("401", "验证码错误"),
+    /** Redis 中注册验证码已过期（5 分钟或不存在） */
+    REGISTER_CODE_EXPIRED("401", "注册验证码已过期"),
+    /** 用户输入注册验证码与 Redis 中不一致 */
+    REGISTER_CODE_ERROR("401", "注册验证码错误"),
     /** refreshToken 签名不对 / 已过期 / 已登出（已在 Redis 中删除） / 被旋转使用 */
     REFRESH_TOKEN_INVALID("401", "refreshToken已失效，请重新登录"),
     /** refresh 过程中发现用户 status != 1（被禁用） */

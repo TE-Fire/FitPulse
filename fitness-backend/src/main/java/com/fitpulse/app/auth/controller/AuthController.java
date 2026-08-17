@@ -3,6 +3,7 @@ package com.fitpulse.app.auth.controller;
 import com.fitpulse.app.auth.dto.req.LoginReq;
 import com.fitpulse.app.auth.dto.req.RefreshReq;
 import com.fitpulse.app.auth.dto.req.RegisterReq;
+import com.fitpulse.app.auth.dto.req.RegisterSendCodeReq;
 import com.fitpulse.app.auth.dto.req.SendCodeReq;
 import com.fitpulse.app.auth.dto.vo.LoginUserVO;
 import com.fitpulse.app.auth.jwt.CurrentUser;
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Auth 模块入口。
- * <p>白名单接口（SecurityConfig permitAll）：/register /login /login/send-code /refresh。
+ * <p>白名单接口（SecurityConfig permitAll）：/register /register/send-code /login /login/send-code /refresh。
  * <p>需认证接口：/logout（任何当前已登录用户都能调用自己的登出）。
  */
 @RestController
@@ -28,11 +29,21 @@ public class AuthController {
     private final AuthService authService;
 
     /**
-     * 用户注册（开放接口）。
+     * 用户注册（开放接口，必须携带正确的注册验证码）。
      */
     @PostMapping("/register")
     public Result<Void> register(@Valid @RequestBody RegisterReq req) {
         authService.register(req);
+        return Result.success();
+    }
+
+    /**
+     * 发送注册验证码（开放接口）。
+     * <p>60 秒内重复发送会被限流；邮箱已注册时拒绝发送；验证码 key 前缀与登录场景完全隔离。
+     */
+    @PostMapping("/register/send-code")
+    public Result<Void> registerSendCode(@Valid @RequestBody RegisterSendCodeReq req) {
+        authService.registerSendCode(req);
         return Result.success();
     }
 
