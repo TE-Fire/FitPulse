@@ -189,3 +189,25 @@
 
 ### 9.4 下一步
 准备执行 P1：Auth 鉴权模块（实体+Mapper+JWT+Security+Controller）
+
+---
+
+## 10. P0 代码规范微调（3 处）
+
+### 10.1 ResultCode → ErrorCodeEnum
+- **位置迁移**：`common/result/ResultCode.java`（删除）→ `common/enums/ErrorCodeEnum.java`（新建，implements IErrorCode）
+- **同步引用**（共 4 处）：
+  - `Result.java`：`ResultCode.SUCCESS` → `ErrorCodeEnum.SUCCESS`
+  - `BusinessException.java`：构造参数 `ResultCode` → `ErrorCodeEnum`
+  - `GlobalExceptionHandler.java`：所有 `ResultCode.XXX` → `ErrorCodeEnum.XXX`（PARAM_ERROR/UNAUTHORIZED/INTERNAL_ERROR 等）
+
+### 10.2 LoginTypeEnum 构造用 Lombok 注解
+- 删除手写构造器，类上追加 `@AllArgsConstructor`
+- `@Getter`、`fromCode()` 静态方法保持不变
+
+### 10.3 RedisKeyConstants 分场景 buildKey 方法
+- 删除可变参数方法 `buildKey(String... segments)`
+- LOGIN_CODE / REFRESH_TOKEN 常量改为 `private`（仅供内部格式化使用）
+- 新增两个静态方法：
+  - `buildLoginCodeKey(String email)` → `fitpulse:login:code:{email}`
+  - `buildRefreshTokenKey(String userId)` → `fitpulse:auth:refresh:{userId}`

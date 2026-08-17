@@ -1,11 +1,12 @@
-package com.fitpulse.app.common.result;
+package com.fitpulse.app.common.enums;
 
+import com.fitpulse.app.common.result.IErrorCode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public enum ResultCode implements IErrorCode {
+public enum ErrorCodeEnum implements IErrorCode {
 
     SUCCESS(0, "操作成功"),
     PARAM_ERROR(400, "参数错误"),

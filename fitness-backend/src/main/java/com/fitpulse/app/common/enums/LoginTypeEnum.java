@@ -1,8 +1,10 @@
 package com.fitpulse.app.common.enums;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @Getter
+@AllArgsConstructor
 public enum LoginTypeEnum {
 
     PASSWORD(1, "密码登录"),
@@ -10,11 +12,6 @@ public enum LoginTypeEnum {
 
     private final int code;
     private final String desc;
-
-    LoginTypeEnum(int code, String desc) {
-        this.code = code;
-        this.desc = desc;
-    }
 
     public static LoginTypeEnum fromCode(Integer code) {
         if (code == null) {

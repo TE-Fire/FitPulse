@@ -1,7 +1,7 @@
 package com.fitpulse.app.common.exception;
 
+import com.fitpulse.app.common.enums.ErrorCodeEnum;
 import com.fitpulse.app.common.result.Result;
-import com.fitpulse.app.common.result.ResultCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -30,30 +30,30 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining("; "));
         log.warn("[ValidationException] {}", message);
-        return Result.fail(ResultCode.PARAM_ERROR, message);
+        return Result.fail(ErrorCodeEnum.PARAM_ERROR, message);
     }
 
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
     public Result<Void> handleParamParse(Exception e) {
         log.warn("[ParamParseException] {}", e.getMessage());
-        return Result.fail(ResultCode.PARAM_ERROR, "请求参数格式错误");
+        return Result.fail(ErrorCodeEnum.PARAM_ERROR, "请求参数格式错误");
     }
 
     @ExceptionHandler(BadCredentialsException.class)
     public Result<Void> handleBadCredentials(BadCredentialsException e) {
         log.warn("[BadCredentialsException] {}", e.getMessage());
-        return Result.fail(ResultCode.UNAUTHORIZED, "邮箱或密码错误");
+        return Result.fail(ErrorCodeEnum.UNAUTHORIZED, "邮箱或密码错误");
     }
 
     @ExceptionHandler(AuthenticationException.class)
     public Result<Void> handleAuthentication(AuthenticationException e) {
         log.warn("[AuthenticationException] {}", e.getMessage());
-        return Result.fail(ResultCode.UNAUTHORIZED, "认证失败");
+        return Result.fail(ErrorCodeEnum.UNAUTHORIZED, "认证失败");
     }
 
     @ExceptionHandler(Exception.class)
     public Result<Void> handleException(Exception e) {
         log.error("[UnhandledException]", e);
-        return Result.fail(ResultCode.INTERNAL_ERROR, "服务器内部错误");
+        return Result.fail(ErrorCodeEnum.INTERNAL_ERROR, "服务器内部错误");
     }
 }

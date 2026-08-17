@@ -1,5 +1,6 @@
 package com.fitpulse.app.common.result;
 
+import com.fitpulse.app.common.enums.ErrorCodeEnum;
 import lombok.Data;
 
 @Data
@@ -16,15 +17,15 @@ public class Result<T> {
 
     public static <T> Result<T> success() {
         Result<T> result = new Result<>();
-        result.setCode(ResultCode.SUCCESS.getCode());
-        result.setMessage(ResultCode.SUCCESS.getMessage());
+        result.setCode(ErrorCodeEnum.SUCCESS.getCode());
+        result.setMessage(ErrorCodeEnum.SUCCESS.getMessage());
         return result;
     }
 
     public static <T> Result<T> success(T data) {
         Result<T> result = new Result<>();
-        result.setCode(ResultCode.SUCCESS.getCode());
-        result.setMessage(ResultCode.SUCCESS.getMessage());
+        result.setCode(ErrorCodeEnum.SUCCESS.getCode());
+        result.setMessage(ErrorCodeEnum.SUCCESS.getMessage());
         result.setData(data);
         return result;
     }

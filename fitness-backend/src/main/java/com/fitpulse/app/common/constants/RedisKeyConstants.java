@@ -7,10 +7,14 @@ public final class RedisKeyConstants {
 
     private static final String PREFIX = "fitpulse:";
 
-    public static final String LOGIN_CODE = PREFIX + "login:code:%s";
-    public static final String REFRESH_TOKEN = PREFIX + "auth:refresh:%s";
+    private static final String LOGIN_CODE = PREFIX + "login:code:%s";
+    private static final String REFRESH_TOKEN = PREFIX + "auth:refresh:%s";
 
-    public static String buildKey(String... segments) {
-        return PREFIX + String.join(":", segments);
+    public static String buildLoginCodeKey(String email) {
+        return String.format(LOGIN_CODE, email);
+    }
+
+    public static String buildRefreshTokenKey(String userId) {
+        return String.format(REFRESH_TOKEN, userId);
     }
 }
