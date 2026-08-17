@@ -64,7 +64,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 // 异常处理
-                .exceptionHandler(ex -> ex
+                .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(restAuthenticationEntryPoint)
                         .accessDeniedHandler(restAccessDeniedHandler)
                 )
