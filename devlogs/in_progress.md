@@ -534,3 +534,28 @@ P1-4 阶段 AuthService 直接写成具体类（`@Service` 注解在类上），
 - `meal_record`：用 quantity_g 替换 serving_g
 - `water_log`：简化为 amount_ml，移除 drink_time
 - `file_resource`：用 bucket/object_key/file_size/file_url 替换 object_name/size_bytes/file_md5/biz_type
+
+---
+
+## 22. Logback 启动报错修复（Empty or null pattern）
+
+### 22.1 问题现象
+FitnessApplication 启动即退出，报错：
+```
+Logging system failed to initialize using configuration from 'null'
+ERROR in ch.qos.logback.classic.PatternLayout("null") - Empty or null pattern.
+```
+原因：logback 初始化在 Spring Boot 最早期（environmentPrepared），任何配置错误都会直接导致 JVM 退出。
+
+### 22.2 定位
+[logback-spring.xml](file:///d:/FitPulse/fitness-backend/src/main/resources/logback-spring.xml#L8) 第 8 行：
+```xml
+<pattern></pattern>   <!-- 空字符串，正好对应 Empty pattern -->
+```
+但文件顶部已定义 `LOG_PATTERN` property，未引用。
+
+### 22.3 修复
+将空 pattern 改为引用 `${LOG_PATTERN}`：
+```xml
+<pattern>${LOG_PATTERN}</pattern>
+```

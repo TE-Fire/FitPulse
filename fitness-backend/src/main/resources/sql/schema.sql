@@ -4,6 +4,13 @@
 -- 基准: docs/设计契约.md 第 2.2 节
 -- ============================================================
 
+-- ========== 建库 ==========
+CREATE DATABASE IF NOT EXISTS fitpulse_db
+    DEFAULT CHARACTER SET utf8mb4
+    DEFAULT COLLATE utf8mb4_unicode_ci;
+
+USE fitpulse_db;
+
 -- ========== 用户域 ==========
 CREATE TABLE IF NOT EXISTS user (
     id              BIGINT PRIMARY KEY COMMENT '雪花ID',
