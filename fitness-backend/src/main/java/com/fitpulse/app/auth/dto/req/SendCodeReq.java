@@ -1,4 +1,4 @@
-package com.fitpulse.app.dto.req;
+package com.fitpulse.app.auth.dto.req;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;

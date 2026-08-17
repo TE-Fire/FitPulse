@@ -1,4 +1,4 @@
-package com.fitpulse.app.dto.vo;
+package com.fitpulse.app.auth.dto.vo;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

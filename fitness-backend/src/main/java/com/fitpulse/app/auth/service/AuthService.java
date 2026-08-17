@@ -1,17 +1,17 @@
-package com.fitpulse.app.service;
+package com.fitpulse.app.auth.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fitpulse.app.auth.dto.req.LoginReq;
+import com.fitpulse.app.auth.dto.req.RefreshReq;
+import com.fitpulse.app.auth.dto.req.RegisterReq;
+import com.fitpulse.app.auth.dto.req.SendCodeReq;
+import com.fitpulse.app.auth.dto.vo.LoginUserVO;
 import com.fitpulse.app.auth.jwt.JwtTokenProvider;
 import com.fitpulse.app.common.constants.RedisKeyConstants;
 import com.fitpulse.app.common.enums.ErrorCodeEnum;
 import com.fitpulse.app.common.enums.LoginTypeEnum;
 import com.fitpulse.app.common.exception.BusinessException;
 import com.fitpulse.app.common.mail.MailService;
-import com.fitpulse.app.dto.req.LoginReq;
-import com.fitpulse.app.dto.req.RefreshReq;
-import com.fitpulse.app.dto.req.RegisterReq;
-import com.fitpulse.app.dto.req.SendCodeReq;
-import com.fitpulse.app.dto.vo.LoginUserVO;
 import com.fitpulse.app.entity.User;
 import com.fitpulse.app.mapper.UserMapper;
 import io.jsonwebtoken.Claims;
@@ -156,14 +156,6 @@ public class AuthService {
         }
     }
 
-    private void verifyPasswordFormat(String password) {
-        if (!StringUtils.hasText(password)
-                || password.length() < 8
-                || !password.matches("^(?=.*[A-Za-z])(?=.*\\d).{8,}$")) {
-            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR, "密码格式不正确");
-        }
-    }
-
     private void verifyCodeAndConsume(String email, String code) {
         if (!StringUtils.hasText(code) || !code.matches("^\\d{6}$")) {
             throw new BusinessException(ErrorCodeEnum.PARAM_ERROR, "验证码格式不正确");
@@ -197,7 +189,7 @@ public class AuthService {
             throw new BusinessException(ErrorCodeEnum.CONFLICT, "发送过于频繁，请 60 秒后再试");
         }
 
-        // 2. 生成 6 位验证码
+        // 2. 生成 6 位验证码（首位非零）
         String code = String.valueOf((int) ((Math.random() * 9 + 1) * 100_000));
 
         // 3. 存 Redis（验证码 + 防刷标记）

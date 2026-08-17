@@ -353,3 +353,40 @@
 
 ### 16.6 编译验证
 `mvn compile` BUILD SUCCESS（JDK 21 / 29 个源文件 / 15.9s）
+
+---
+
+## 17. Auth 模块目录聚合重构：DTO/Service 迁入 auth 包下
+
+### 17.1 重构背景
+P1-5/6 初期把 DTO 放在全局 `dto/req`、`dto/vo`，Service 放在全局 `service/`。
+根据项目约定，每个业务模块应有独立的 `dto`、`service` 子包，按模块聚合避免污染全局命名空间。
+
+### 17.2 变更明细
+| 原位置 | 新位置 |
+|---|---|
+| `dto/req/RegisterReq.java` | `auth/dto/req/RegisterReq.java` |
+| `dto/req/LoginReq.java` | `auth/dto/req/LoginReq.java` |
+| `dto/req/SendCodeReq.java` | `auth/dto/req/SendCodeReq.java` |
+| `dto/req/RefreshReq.java` | `auth/dto/req/RefreshReq.java` |
+| `dto/vo/LoginUserVO.java` | `auth/dto/vo/LoginUserVO.java` |
+| `service/AuthService.java` | `auth/service/AuthService.java` |
+| 空目录 `dto/`、`service/` | 删除 |
+
+### 17.3 约定的目标结构（后续模块都遵循）
+```
+com.fitpulse.app/
+├── auth/                 ← 每个业务模块独立包
+│   ├── controller/       ← Controller 也放模块下（P1-6 迁入）
+│   ├── service/          ← 本模块 Service
+│   ├── dto/req/          ← 本模块请求 DTO
+│   ├── dto/vo/           ← 本模块响应 VO
+│   └── jwt/              ← 本模块专属工具（JWT 4 件套已在）
+├── common/               ← 全局通用
+├── entity/               ← 全局实体（跨模块共享）
+├── mapper/               ← 全局 Mapper（跨模块共享）
+└── security/             ← 全局 Security 配置
+```
+
+### 17.4 编译验证
+`mvn compile` BUILD SUCCESS（JDK 21 / 29 个源文件 / 17.1s）
