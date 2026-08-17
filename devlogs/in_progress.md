@@ -237,3 +237,22 @@
 ### 11.4 Result 新增 fail(BusinessException) 重载 + Handler 简化
 - Result.java 新增 `fail(BusinessException e)`：直接取 e.getErrorCode()/e.getErrorMessage() 组装返回
 - GlobalExceptionHandler.handleBusinessException 简化：`Result.fail(e.code(), e.getMessage())` → `return Result.fail(e);`
+
+---
+
+## 12. P1-1 Auth模块实体层精简落地（仅User表，注册登录用）
+
+> 按阶段最小化原则：P1 只关注注册登录流程，UserProfile / UserGoal 延后到个人资料/目标模块
+
+### 12.1 文件清单（2 个）
+| 文件 | 说明 |
+|---|---|
+| `entity/User.java` | 表 user，雪花ID（ASSIGN_ID），字段：username / passwordHash / email / status(Integer 1启用/0禁用) / lastLoginAt / createdAt(INSERT填充) / updatedAt(INSERT_UPDATE填充) / deleted(@TableLogic) |
+| `mapper/UserMapper.java` | `@Mapper`，继承 `BaseMapper<User>`，无业务SQL（行级隔离在Service传参） |
+
+### 12.2 阶段剔除清单（延后非P1）
+- ❌ entity/UserProfile.java
+- ❌ entity/UserGoal.java
+- ❌ mapper/UserProfileMapper.java
+- ❌ mapper/UserGoalMapper.java
+- ❌ AuthService.register 中 Profile/Goal 初始化逻辑（后续模块创建时补）
