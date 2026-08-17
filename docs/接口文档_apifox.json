@@ -1082,7 +1082,8 @@
         "type": "object",
         "required": [
           "email",
-          "password"
+          "password",
+          "code"
         ],
         "properties": {
           "email": {
@@ -1095,11 +1096,17 @@
             "minLength": 8,
             "maxLength": 64,
             "description": "至少包含字母和数字"
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^\\d{6}$",
+            "description": "注册验证码（先调 /auth/register/send-code，5min 内有效）"
           }
         },
         "example": {
           "email": "fire_dev@qq.com",
-          "password": "Fire@2026"
+          "password": "Fire@2026",
+          "code": "482917"
         }
       },
       "LoginReq": {
@@ -1141,6 +1148,22 @@
           "password": "Fire@2026"
         }
       },
+      "RegisterSendCodeReq": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "pattern": "^[^@]+@qq\\.com$",
+            "description": "接收注册验证码的 QQ 邮箱"
+          }
+        },
+        "example": {
+          "email": "fire_dev@qq.com"
+        }
+      },
       "SendCodeReq": {
         "type": "object",
         "required": [
@@ -1150,7 +1173,7 @@
           "email": {
             "type": "string",
             "pattern": "^[^@]+@qq\\.com$",
-            "description": "接收验证码的 QQ 邮箱"
+            "description": "接收登录验证码的 QQ 邮箱"
           }
         },
         "example": {
@@ -2785,12 +2808,49 @@
         ]
       }
     },
+    "/auth/register/send-code": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "发送注册验证码到QQ邮箱（6位数字，5min有效，60s防刷，与登录验证码前缀独立）",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterSendCodeReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "发送成功(data=null)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                },
+                "example": {
+                  "code": 0,
+                  "message": "success",
+                  "data": null,
+                  "timestamp": 1755410000000
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/register": {
       "post": {
         "tags": [
           "Auth"
         ],
-        "summary": "注册（QQ邮箱，username后端自动生成）",
+        "summary": "注册（QQ邮箱+注册验证码，username后端自动生成）",
         "security": [],
         "requestBody": {
           "required": true,
@@ -2870,7 +2930,7 @@
         "tags": [
           "Auth"
         ],
-        "summary": "发送验证码到QQ邮箱（6位数字，5min有效）",
+        "summary": "发送登录验证码到QQ邮箱（6位数字，5min有效，与注册验证码前缀独立互不相通）",
         "security": [],
         "requestBody": {
           "required": true,
