@@ -256,3 +256,23 @@
 - ❌ mapper/UserProfileMapper.java
 - ❌ mapper/UserGoalMapper.java
 - ❌ AuthService.register 中 Profile/Goal 初始化逻辑（后续模块创建时补）
+
+---
+
+## 13. P1-2 JWT 层落地（4 件套）
+
+> 基于 jjwt 0.12.5（HS256 对称签名），refreshToken 双写 Redis 实现服务端失效控制。
+
+### 13.1 文件清单（4 个）
+| 文件 | 说明 |
+|---|---|
+| `auth/jwt/JwtProperties.java` | `@ConfigurationProperties(prefix="fitpulse.jwt")`，字段：secret / accessExpireMinutes(1440) / refreshExpireMinutes(43200) / header(Authorization) / prefix("Bearer ") |
+| `auth/jwt/JwtTokenProvider.java` | `@Component`，`@PostConstruct` 生成 SecretKey。<br>• `generateAccessToken(userId, username)` — claim: sub=userId, username, type=access<br>• `generateRefreshToken(userId)` — claim: type=refresh，同时写入 Redis key=`fitpulse:auth:refresh:{userId}`，TTL=refreshExpire<br>• `parseToken(token)` — `Jwts.parser().verifyWith(key).build().parseSignedClaims()`，失败抛 BusinessException(UNAUTHORIZED)<br>• `getUserIdFromToken(token)` — 解析 sub 转 Long<br>• `isRefreshTokenValid(userId, token)` — Redis 比对<br>• `revokeRefreshToken(userId)` — 删除 Redis key |
+| `auth/jwt/JwtAuthFilter.java` | `@Component`，继承 `OncePerRequestFilter`。<br>从 Header 取 Authorization 去前缀 → parseToken → 校验 type=access → 构造 `UsernamePasswordAuthenticationToken(userId, null, emptyList)`，`setDetails(username)` → 写入 SecurityContext。<br>约定：**principal=userId(Long), details=username(String)**。<br>异常不抛，仅清 Context 放行。 |
+| `auth/jwt/CurrentUser.java` | 静态工具类（private 构造）。<br>• `getUserId()` — 从 principal 取 Long，未登录返回 null<br>• `getUsername()` — 从 details 取 String，未登录返回 null |
+
+### 13.2 关键设计点
+- **jjwt 0.12.x API**：`Jwts.builder().subject().claim().signWith(key).compact()` / `Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload()`
+- **token 类型隔离**：access/refresh 用 `type` claim 区分，filter 仅认 access 类型，防止 refresh 被滥用为鉴权 token
+- **refresh Redis 双写**：生成即写，登出/旋转即删，实现服务端主动失效
+- **Filter 异常策略**：解析失败清 Context 放行，由 Security 链的 anyRequest().authenticated() + RestAuthenticationEntryPoint 统一返回 401（P1-3 落地）
