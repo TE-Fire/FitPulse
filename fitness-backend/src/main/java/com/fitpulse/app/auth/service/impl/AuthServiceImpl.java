@@ -7,6 +7,7 @@ import com.fitpulse.app.auth.dto.req.RegisterReq;
 import com.fitpulse.app.auth.dto.req.RegisterSendCodeReq;
 import com.fitpulse.app.auth.dto.req.SendCodeReq;
 import com.fitpulse.app.auth.dto.vo.LoginUserVO;
+import com.fitpulse.app.auth.dto.vo.SendCodeResp;
 import com.fitpulse.app.auth.enums.AuthErrorCode;
 import com.fitpulse.app.auth.jwt.JwtTokenProvider;
 import com.fitpulse.app.auth.service.AuthService;
@@ -189,10 +190,10 @@ public class AuthServiceImpl implements AuthService {
     // ============================== 发送验证码 ==============================
 
     @Override
-    public void registerSendCode(RegisterSendCodeReq req) {
+    public SendCodeResp registerSendCode(RegisterSendCodeReq req) {
         String email = req.getEmail();
 
-        // 1. 注册场景：若邮箱已注册，拒绝发送（让攻击者无法枚举哪些邮箱已注册？这里返回失败属于安全取舍）
+        // 1. 注册场景：若邮箱已注册，拒绝发送
         Long exist = userMapper.selectCount(
                 new LambdaQueryWrapper<User>().eq(User::getEmail, email)
         );
@@ -219,7 +220,7 @@ public class AuthServiceImpl implements AuthService {
         );
         redisTemplate.opsForValue().set(rateKey, "1", CODE_RATE_LIMIT_SEC, TimeUnit.SECONDS);
 
-        // 5. 开发期日志输出
+        // 5. 开发期日志输出（与 SendCodeResp.code、邮件正文、Redis 值完全一致）
         log.info("[注册验证码] email={}, code={}", email, code);
 
         // 6. 邮件发送：注册场景专属主题
@@ -228,10 +229,16 @@ public class AuthServiceImpl implements AuthService {
                 code
         );
         mailService.sendMail(email, "FitPulse 注册验证码", content);
+
+        return SendCodeResp.builder()
+                .code(code)
+                .expireMinutes(CODE_EXPIRE_MIN)
+                .rateLimitSeconds(CODE_RATE_LIMIT_SEC)
+                .build();
     }
 
     @Override
-    public void sendCode(SendCodeReq req) {
+    public SendCodeResp sendCode(SendCodeReq req) {
         String email = req.getEmail();
 
         // 1. 60 秒防刷
@@ -253,7 +260,7 @@ public class AuthServiceImpl implements AuthService {
         );
         redisTemplate.opsForValue().set(rateKey, "1", CODE_RATE_LIMIT_SEC, TimeUnit.SECONDS);
 
-        // 4. 开发期日志输出
+        // 4. 开发期日志输出（与 SendCodeResp.code、邮件正文、Redis 值完全一致）
         log.info("[验证码] email={}, code={}", email, code);
 
         // 5. 邮件发送
@@ -262,6 +269,12 @@ public class AuthServiceImpl implements AuthService {
                 code
         );
         mailService.sendMail(email, "FitPulse 登录验证码", content);
+
+        return SendCodeResp.builder()
+                .code(code)
+                .expireMinutes(CODE_EXPIRE_MIN)
+                .rateLimitSeconds(CODE_RATE_LIMIT_SEC)
+                .build();
     }
 
     // ============================== 刷新 Token ==============================

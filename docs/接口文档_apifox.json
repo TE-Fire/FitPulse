@@ -1179,6 +1179,33 @@
         "example": {
           "email": "fire_dev@qq.com"
         }
+      },
+      "SendCodeResp": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^\\d{6}$",
+            "description": "6位验证码明文，与控制台日志、邮件正文、Redis存储值一致（本地/演示环境返回）"
+          },
+          "expireMinutes": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "验证码有效期（分钟）"
+          },
+          "rateLimitSeconds": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "同邮箱发送频率限制（秒），超过此间隔前重复发送会返回409防刷"
+          }
+        },
+        "example": {
+          "code": "482917",
+          "expireMinutes": 5,
+          "rateLimitSeconds": 60
+        }
       }
     }
   },
@@ -2827,16 +2854,32 @@
         },
         "responses": {
           "200": {
-            "description": "发送成功(data=null)",
+            "description": "发送注册验证码成功，data返回验证码明文与过期/限流元信息",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Result"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/SendCodeResp"
+                        }
+                      }
+                    }
+                  ]
                 },
                 "example": {
                   "code": 0,
                   "message": "success",
-                  "data": null,
+                  "data": {
+                    "code": "482917",
+                    "expireMinutes": 5,
+                    "rateLimitSeconds": 60
+                  },
                   "timestamp": 1755410000000
                 }
               }
@@ -2944,16 +2987,32 @@
         },
         "responses": {
           "200": {
-            "description": "发送成功(data=null)",
+            "description": "发送登录验证码成功，data返回验证码明文与过期/限流元信息",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Result"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/SendCodeResp"
+                        }
+                      }
+                    }
+                  ]
                 },
                 "example": {
                   "code": 0,
                   "message": "success",
-                  "data": null,
+                  "data": {
+                    "code": "952764",
+                    "expireMinutes": 5,
+                    "rateLimitSeconds": 60
+                  },
                   "timestamp": 1755410000000
                 }
               }

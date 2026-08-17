@@ -6,6 +6,7 @@ import com.fitpulse.app.auth.dto.req.RegisterReq;
 import com.fitpulse.app.auth.dto.req.RegisterSendCodeReq;
 import com.fitpulse.app.auth.dto.req.SendCodeReq;
 import com.fitpulse.app.auth.dto.vo.LoginUserVO;
+import com.fitpulse.app.auth.dto.vo.SendCodeResp;
 
 /**
  * Auth 业务接口：注册 / 登录 / 发送验证码 / 刷新 / 登出。
@@ -20,8 +21,9 @@ public interface AuthService {
 
     /**
      * 发送 6 位注册验证码到 QQ 邮箱（60s 内防刷，key 前缀与登录验证码完全隔离）。
+     * <p>返回响应对象中 code 明文与控制台日志、邮件正文、Redis 存储值一致，便于本地/演示联调。
      */
-    void registerSendCode(RegisterSendCodeReq req);
+    SendCodeResp registerSendCode(RegisterSendCodeReq req);
 
     /**
      * 登录：type=1 密码登录 / type=2 验证码登录。
@@ -30,8 +32,9 @@ public interface AuthService {
 
     /**
      * 发送 6 位登录验证码到 QQ 邮箱（60s 内防刷）。
+     * <p>返回响应对象中 code 明文与控制台日志、邮件正文、Redis 存储值一致，便于本地/演示联调。
      */
-    void sendCode(SendCodeReq req);
+    SendCodeResp sendCode(SendCodeReq req);
 
     /**
      * 用 refreshToken 换取新的双 Token（旋转失效）。

@@ -698,3 +698,47 @@ url: jdbc:mysql://...fitpulse_db?useUnicode=true&characterEncoding=UTF-8&connect
 
 请把本地 `application-dev.yml` 中 `spring.datasource.url` 这一行按 26.3 的修复改完，然后重启 FitnessApplication 即可。改完后 register/send-code 会走到 HikariPool 初始化成功 → 成功查询 user 表 + 写 Redis 验证码。
 
+---
+
+## 27. 修正"发送验证码接口响应不返回验证码明文" + apifox/md 文档同步
+
+### 27.1 问题现象（Apifox 两张截图）
+1. 调完 `/auth/register/send-code`（或 `/auth/login/send-code`）后想继续调 `/auth/register` / `/auth/login type=2`，但 Apifox 响应里**看不到验证码值**，只能切到 IDEA 控制台翻 `log.info("[注册验证码] code=xxx")`，联调成本高；
+2. 用户把**响应外层的 `code: 0`（Result 业务状态码"成功"）** 误以为是"验证码值"，就以为"接口返回的 code=0 和控制台输出的 6 位数字不是同一个"；
+3. 另外担心 `接口文档_apifox.json` 的 `/auth/register` 请求体缺少 `code` 字段、无法进行契约校验。
+
+### 27.2 文档现场核对（`接口文档_apifox.json`）
+用 Grep 定位后读取片段：
+- `#/components/schemas/RegisterReq` 的 `required` 已含 `"email","password","code"`，`properties.code` 有 `pattern=^\\d{6}$`，`example` 含 `"code":"482917"` —— **json 契约实际是正确的**，Apifox 客户端"导入后没刷新/缓存旧版本"会显示成缺字段，需重新导入或手动 Reload OpenAPI schema。
+- 两个 send-code 响应的 schema 只引用 `Result`，example `data: null` —— 这个才是真正让用户"看不到验证码"的根源。
+
+### 27.3 代码改动
+1. 新增 [SendCodeResp.java](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/auth/dto/vo/SendCodeResp.java)（code:String 6位数字 + expireMinutes:Long + rateLimitSeconds:Long，均来自实现类常量）。
+2. [AuthService.java](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/auth/service/AuthService.java) 两个 send-code 返回值由 `void` → `SendCodeResp`。
+3. [AuthServiceImpl.java](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/auth/service/impl/AuthServiceImpl.java) 两个方法在发送邮件后 `return SendCodeResp.builder().code(code).expireMinutes(CODE_EXPIRE_MIN).rateLimitSeconds(CODE_RATE_LIMIT_SEC).build()` —— 保证 `SendCodeResp.code` **与日志输出、邮件正文、Redis 存储四值完全一致**。
+4. [AuthController.java](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/auth/controller/AuthController.java) 两个方法由 `Result<Void>` → `Result<SendCodeResp>`，直接 `return Result.success(authService.xxx(req))`。
+
+### 27.4 文档改动
+1. [接口文档_apifox.json](file:///d:/FitPulse/docs/%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3_apifox.json)
+   - schemas 新增 `SendCodeResp`（code/expireMinutes/rateLimitSeconds 三字段 + pattern/minimum 约束）
+   - `/auth/register/send-code` 与 `/auth/login/send-code` 的 200 响应 schema 改为 `allOf(Result, {data: $ref SendCodeResp})`，example 分别用 `482917` / `952764` 示例
+2. [接口文档.md](file:///d:/FitPulse/docs/%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3.md) 2.1 / 2.4 两节
+   - 原"响应 data=null"替换为"成功响应 data 字段"表格
+   - 服务端行为补第 7/5 条"上述 data.code 明文回传=日志=邮件=Redis，方便联调"
+
+### 27.5 响应体对照（调完 send-code 看到的真实结果）
+```jsonc
+// POST /auth/register/send-code  或  POST /auth/login/send-code
+{
+  "code": 0,          // 外层 Result 业务码：0=成功，不是验证码
+  "message": "success",
+  "data": {
+    "code": "482917", // ← ✅ 这里才是 6 位验证码，和控制台 log.info 打印的完全一致
+    "expireMinutes": 5,
+    "rateLimitSeconds": 60
+  },
+  "timestamp": 1755410000000
+}
+```
+用户只要在 Apifox 里把 send-code 的**后置操作**设置为"提取 `data.code` 到环境变量 REGISTER_CODE / LOGIN_CODE"，然后在 register/login 请求体中 `"code": "{{REGISTER_CODE}}"`，就能完成**自动化闭环**，不需要手填。
+

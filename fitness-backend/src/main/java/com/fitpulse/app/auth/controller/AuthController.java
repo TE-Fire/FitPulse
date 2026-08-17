@@ -6,6 +6,7 @@ import com.fitpulse.app.auth.dto.req.RegisterReq;
 import com.fitpulse.app.auth.dto.req.RegisterSendCodeReq;
 import com.fitpulse.app.auth.dto.req.SendCodeReq;
 import com.fitpulse.app.auth.dto.vo.LoginUserVO;
+import com.fitpulse.app.auth.dto.vo.SendCodeResp;
 import com.fitpulse.app.auth.jwt.CurrentUser;
 import com.fitpulse.app.auth.service.AuthService;
 import com.fitpulse.app.common.result.Result;
@@ -40,11 +41,11 @@ public class AuthController {
     /**
      * 发送注册验证码（开放接口）。
      * <p>60 秒内重复发送会被限流；邮箱已注册时拒绝发送；验证码 key 前缀与登录场景完全隔离。
+     * <p>返回体 data.code 与控制台 log.info 输出、邮件正文、Redis 存储值完全一致，便于本地/演示联调。
      */
     @PostMapping("/register/send-code")
-    public Result<Void> registerSendCode(@Valid @RequestBody RegisterSendCodeReq req) {
-        authService.registerSendCode(req);
-        return Result.success();
+    public Result<SendCodeResp> registerSendCode(@Valid @RequestBody RegisterSendCodeReq req) {
+        return Result.success(authService.registerSendCode(req));
     }
 
     /**
@@ -59,11 +60,11 @@ public class AuthController {
     /**
      * 发送登录验证码（开放接口）。
      * <p>60 秒内重复发送会被限流（Service 内部用 Redis 控制）。
+     * <p>返回体 data.code 与控制台 log.info 输出、邮件正文、Redis 存储值完全一致，便于本地/演示联调。
      */
     @PostMapping("/login/send-code")
-    public Result<Void> sendCode(@Valid @RequestBody SendCodeReq req) {
-        authService.sendCode(req);
-        return Result.success();
+    public Result<SendCodeResp> sendCode(@Valid @RequestBody SendCodeReq req) {
+        return Result.success(authService.sendCode(req));
     }
 
     /**
