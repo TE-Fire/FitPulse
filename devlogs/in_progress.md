@@ -456,3 +456,46 @@ P1-4 阶段 AuthService 直接写成具体类（`@Service` 注解在类上），
 
 ### 19.4 编译验证
 `mvn compile` BUILD SUCCESS（JDK 21 / 31 个源文件 / 14.8s）
+
+---
+
+## 20. Auth 模块专属业务错误枚举 + BusinessException 通用化构造器
+
+### 20.1 重构背景
+之前写法：`throw new BusinessException(ErrorCodeEnum.CONFLICT, "邮箱已注册")`
+- 通用枚举的 message 是"资源冲突"，与第二个参数"邮箱已注册"重复且散
+- 构造参数类型写死为 `ErrorCodeEnum`（具体类），其他模块无法传自定义枚举
+
+### 20.2 改造点（2 个）
+
+#### 20.2.1 新建 `auth/enums/AuthErrorCode`（11 个枚举常量）
+- 实现 `BaseExceptionInterface`，与 common 异常契约兼容
+- code 沿用 HTTP 大类值（400/401/409），前端仍可做大类判断
+- 每个枚举精确对应 auth 业务场景，message 为精准中文文案
+
+| 枚举常量 | code | message |
+|---|---|---|
+| EMAIL_ALREADY_REGISTERED | 409 | 邮箱已注册 |
+| SEND_CODE_TOO_FREQUENT | 409 | 发送过于频繁，请60秒后再试 |
+| INVALID_LOGIN_TYPE | 400 | 登录类型非法 |
+| PASSWORD_EMPTY | 400 | 密码不能为空 |
+| CODE_FORMAT_ERROR | 400 | 验证码格式不正确 |
+| NOT_REFRESH_TOKEN | 400 | 不是有效的refreshToken |
+| EMAIL_OR_PASSWORD_ERROR | 401 | 邮箱或密码错误（防枚举统一提示） |
+| CODE_EXPIRED | 401 | 验证码已过期 |
+| CODE_ERROR | 401 | 验证码错误 |
+| REFRESH_TOKEN_INVALID | 401 | refreshToken已失效，请重新登录 |
+| ACCOUNT_DISABLED | 401 | 账号已禁用，请重新登录 |
+
+#### 20.2.2 BusinessException 构造器参数接口化
+- `BusinessException(ErrorCodeEnum)` → `BusinessException(BaseExceptionInterface)`
+- `BusinessException(ErrorCodeEnum, String)` → `BusinessException(BaseExceptionInterface, String)`
+- 单 String message 构造器保留（兜底 code=INTERNAL_ERROR 500）
+
+**效果**：任何模块自定义的错误枚举只要实现 `BaseExceptionInterface` 都能直接传入，不再强依赖 common 层具体枚举类。
+
+### 20.3 AuthServiceImpl 13 处异常调用
+全部从双参数写法改为单参数 `BusinessException(AuthErrorCode.XXX)`，不再重复 message。
+
+### 20.4 编译验证
+`mvn compile` BUILD SUCCESS（JDK 21 / 7.1s）

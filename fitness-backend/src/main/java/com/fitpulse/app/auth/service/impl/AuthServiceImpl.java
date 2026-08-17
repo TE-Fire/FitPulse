@@ -6,10 +6,10 @@ import com.fitpulse.app.auth.dto.req.RefreshReq;
 import com.fitpulse.app.auth.dto.req.RegisterReq;
 import com.fitpulse.app.auth.dto.req.SendCodeReq;
 import com.fitpulse.app.auth.dto.vo.LoginUserVO;
+import com.fitpulse.app.auth.enums.AuthErrorCode;
 import com.fitpulse.app.auth.jwt.JwtTokenProvider;
 import com.fitpulse.app.auth.service.AuthService;
 import com.fitpulse.app.common.constants.RedisKeyConstants;
-import com.fitpulse.app.common.enums.ErrorCodeEnum;
 import com.fitpulse.app.common.enums.LoginTypeEnum;
 import com.fitpulse.app.common.exception.BusinessException;
 import com.fitpulse.app.common.mail.MailService;
@@ -59,7 +59,7 @@ public class AuthServiceImpl implements AuthService {
                 new LambdaQueryWrapper<User>().eq(User::getEmail, email)
         );
         if (exist != null && exist > 0) {
-            throw new BusinessException(ErrorCodeEnum.CONFLICT, "邮箱已注册");
+            throw new BusinessException(AuthErrorCode.EMAIL_ALREADY_REGISTERED);
         }
 
         // 2. 生成唯一 username（从 email 前缀）
@@ -104,7 +104,7 @@ public class AuthServiceImpl implements AuthService {
         // 1. 校验登录类型
         LoginTypeEnum loginType = LoginTypeEnum.fromCode(req.getType());
         if (loginType == null) {
-            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR, "登录类型非法");
+            throw new BusinessException(AuthErrorCode.INVALID_LOGIN_TYPE);
         }
 
         // 2. 按 email 找用户，未找到/禁用 统一提示（防枚举攻击）
@@ -112,7 +112,7 @@ public class AuthServiceImpl implements AuthService {
                 new LambdaQueryWrapper<User>().eq(User::getEmail, req.getEmail())
         );
         if (user == null || user.getStatus() == null || user.getStatus() != 1) {
-            throw new BusinessException(ErrorCodeEnum.UNAUTHORIZED, "邮箱或密码错误");
+            throw new BusinessException(AuthErrorCode.EMAIL_OR_PASSWORD_ERROR);
         }
 
         // 3. 分支校验
@@ -141,24 +141,24 @@ public class AuthServiceImpl implements AuthService {
 
     private void verifyPassword(User user, String password) {
         if (!StringUtils.hasText(password)) {
-            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR, "密码不能为空");
+            throw new BusinessException(AuthErrorCode.PASSWORD_EMPTY);
         }
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
-            throw new BusinessException(ErrorCodeEnum.UNAUTHORIZED, "邮箱或密码错误");
+            throw new BusinessException(AuthErrorCode.EMAIL_OR_PASSWORD_ERROR);
         }
     }
 
     private void verifyCodeAndConsume(String email, String code) {
         if (!StringUtils.hasText(code) || !code.matches("^\\d{6}$")) {
-            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR, "验证码格式不正确");
+            throw new BusinessException(AuthErrorCode.CODE_FORMAT_ERROR);
         }
         String key = RedisKeyConstants.buildLoginCodeKey(email);
         Object stored = redisTemplate.opsForValue().get(key);
         if (stored == null) {
-            throw new BusinessException(ErrorCodeEnum.UNAUTHORIZED, "验证码已过期");
+            throw new BusinessException(AuthErrorCode.CODE_EXPIRED);
         }
         if (!code.equals(String.valueOf(stored))) {
-            throw new BusinessException(ErrorCodeEnum.UNAUTHORIZED, "验证码错误");
+            throw new BusinessException(AuthErrorCode.CODE_ERROR);
         }
         redisTemplate.delete(key);
     }
@@ -173,7 +173,7 @@ public class AuthServiceImpl implements AuthService {
         String rateKey = RedisKeyConstants.buildLoginCodeKey(email) + ":rate";
         Boolean rateExisted = redisTemplate.hasKey(rateKey);
         if (Boolean.TRUE.equals(rateExisted)) {
-            throw new BusinessException(ErrorCodeEnum.CONFLICT, "发送过于频繁，请 60 秒后再试");
+            throw new BusinessException(AuthErrorCode.SEND_CODE_TOO_FREQUENT);
         }
 
         // 2. 生成 6 位验证码（首位非零）
@@ -210,23 +210,23 @@ public class AuthServiceImpl implements AuthService {
         try {
             claims = jwtTokenProvider.parseToken(refreshToken);
         } catch (BusinessException e) {
-            throw new BusinessException(ErrorCodeEnum.UNAUTHORIZED, "refreshToken 已失效，请重新登录");
+            throw new BusinessException(AuthErrorCode.REFRESH_TOKEN_INVALID);
         }
         if (!"refresh".equals(claims.get("type"))) {
-            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR, "不是有效的 refreshToken");
+            throw new BusinessException(AuthErrorCode.NOT_REFRESH_TOKEN);
         }
         Long userId = Long.valueOf(claims.getSubject());
 
         // 2. Redis 二次校验
         if (!jwtTokenProvider.isRefreshTokenValid(userId, refreshToken)) {
-            throw new BusinessException(ErrorCodeEnum.UNAUTHORIZED, "refreshToken 已失效，请重新登录");
+            throw new BusinessException(AuthErrorCode.REFRESH_TOKEN_INVALID);
         }
 
         // 3. 校验用户状态
         User user = userMapper.selectById(userId);
         if (user == null || user.getStatus() == null || user.getStatus() != 1) {
             jwtTokenProvider.revokeRefreshToken(userId);
-            throw new BusinessException(ErrorCodeEnum.UNAUTHORIZED, "账号已禁用，请重新登录");
+            throw new BusinessException(AuthErrorCode.ACCOUNT_DISABLED);
         }
 
         // 4. 旋转
