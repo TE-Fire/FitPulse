@@ -211,3 +211,29 @@
 - 新增两个静态方法：
   - `buildLoginCodeKey(String email)` → `fitpulse:login:code:{email}`
   - `buildRefreshTokenKey(String userId)` → `fitpulse:auth:refresh:{userId}`
+
+---
+
+## 11. 异常契约接口重构：对齐参考项目规范（IErrorCode → BaseExceptionInterface）
+
+### 11.1 接口替换
+- **删除**：`common/result/IErrorCode.java`
+- **新建**：`common/exception/BaseExceptionInterface.java`（参考 BlueNoteBook 规范）
+  - `String getErrorCode()` // 获取异常码
+  - `String getErrorMessage()` // 获取异常信息
+
+### 11.2 Result 结构 code 字段：int → String（全链路统一）
+| 位置 | 变更前 | 变更后 |
+|---|---|---|
+| Result.java 字段 | `private int code` | `private String code` |
+| Result.fail(int, String) 兜底签名 | `fail(int code, String message)` | `fail(String code, String message)` |
+| Result.success() 取成功码 | `ResultCode.SUCCESS.getCode()`（int） | `ErrorCodeEnum.SUCCESS.getErrorCode()`（String "0"） |
+
+### 11.3 异常类联动修改
+- **ErrorCodeEnum**：`private final int code` → `String code`；常量值 `"0"/"400"/"401"...`；实现 `BaseExceptionInterface`，提供 `getErrorCode()`/`getErrorMessage()`
+- **BaseException**：`private final int code` → `String code`；构造签名同步；`implements BaseExceptionInterface`
+- **BusinessException**：构造参数类型自动适配新签名
+
+### 11.4 Result 新增 fail(BusinessException) 重载 + Handler 简化
+- Result.java 新增 `fail(BusinessException e)`：直接取 e.getErrorCode()/e.getErrorMessage() 组装返回
+- GlobalExceptionHandler.handleBusinessException 简化：`Result.fail(e.code(), e.getMessage())` → `return Result.fail(e);`

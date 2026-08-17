@@ -1,35 +1,34 @@
 package com.fitpulse.app.common.exception;
 
-import com.fitpulse.app.common.result.IErrorCode;
 import lombok.Getter;
 
 @Getter
-public class BaseException extends RuntimeException implements IErrorCode {
+public class BaseException extends RuntimeException implements BaseExceptionInterface {
 
-    private final int code;
+    private final String code;
 
-    public BaseException(IErrorCode errorCode) {
-        super(errorCode.message());
-        this.code = errorCode.code();
+    public BaseException(BaseExceptionInterface errorCode) {
+        super(errorCode.getErrorMessage());
+        this.code = errorCode.getErrorCode();
     }
 
-    public BaseException(IErrorCode errorCode, String message) {
+    public BaseException(BaseExceptionInterface errorCode, String message) {
         super(message);
-        this.code = errorCode.code();
+        this.code = errorCode.getErrorCode();
     }
 
-    public BaseException(int code, String message) {
+    public BaseException(String code, String message) {
         super(message);
         this.code = code;
     }
 
     @Override
-    public int code() {
+    public String getErrorCode() {
         return this.code;
     }
 
     @Override
-    public String message() {
+    public String getErrorMessage() {
         return getMessage();
     }
 }

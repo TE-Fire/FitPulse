@@ -1,21 +1,31 @@
 package com.fitpulse.app.common.enums;
 
-import com.fitpulse.app.common.result.IErrorCode;
+import com.fitpulse.app.common.exception.BaseExceptionInterface;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public enum ErrorCodeEnum implements IErrorCode {
+public enum ErrorCodeEnum implements BaseExceptionInterface {
 
-    SUCCESS(0, "操作成功"),
-    PARAM_ERROR(400, "参数错误"),
-    UNAUTHORIZED(401, "未登录或Token无效"),
-    FORBIDDEN(403, "无访问权限"),
-    NOT_FOUND(404, "资源不存在"),
-    CONFLICT(409, "业务冲突"),
-    INTERNAL_ERROR(500, "服务端异常");
+    SUCCESS("0", "操作成功"),
+    PARAM_ERROR("400", "参数错误"),
+    UNAUTHORIZED("401", "未登录或Token无效"),
+    FORBIDDEN("403", "无访问权限"),
+    NOT_FOUND("404", "资源不存在"),
+    CONFLICT("409", "业务冲突"),
+    INTERNAL_ERROR("500", "服务端异常");
 
-    private final int code;
+    private final String code;
     private final String message;
+
+    @Override
+    public String getErrorCode() {
+        return this.code;
+    }
+
+    @Override
+    public String getErrorMessage() {
+        return this.message;
+    }
 }

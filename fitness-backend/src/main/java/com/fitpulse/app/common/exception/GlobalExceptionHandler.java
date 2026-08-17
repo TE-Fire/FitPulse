@@ -20,8 +20,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public Result<Void> handleBusinessException(BusinessException e) {
-        log.warn("[BusinessException] code={}, message={}", e.code(), e.getMessage());
-        return Result.fail(e.code(), e.getMessage());
+        log.warn("[BusinessException] code={}, message={}", e.getErrorCode(), e.getErrorMessage());
+        return Result.fail(e);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
