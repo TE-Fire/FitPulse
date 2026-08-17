@@ -276,3 +276,22 @@
 - **token 类型隔离**：access/refresh 用 `type` claim 区分，filter 仅认 access 类型，防止 refresh 被滥用为鉴权 token
 - **refresh Redis 双写**：生成即写，登出/旋转即删，实现服务端主动失效
 - **Filter 异常策略**：解析失败清 Context 放行，由 Security 链的 anyRequest().authenticated() + RestAuthenticationEntryPoint 统一返回 401（P1-3 落地）
+
+---
+
+## 14. P1-3 Spring Security 配置落地（3 个类）
+
+> 无状态 JWT 模式：禁用 CSRF/Session，CORS 开发期全放行，白名单放行 auth 公开接口，JwtAuthFilter 注入过滤器链。
+
+### 14.1 文件清单（3 个）
+| 文件 | 说明 |
+|---|---|
+| `security/RestAuthenticationEntryPoint.java` | `@Component`，implements `AuthenticationEntryPoint`。未认证访问受保护资源时触发（401），用 ObjectMapper 写 JSON `Result.fail(UNAUTHORIZED)`，response.setStatus(401) |
+| `security/RestAccessDeniedHandler.java` | `@Component`，implements `AccessDeniedHandler`。已认证但无权限时触发（403），写 JSON `Result.fail(FORBIDDEN)`，response.setStatus(403) |
+| `security/SecurityConfig.java` | `@Configuration` + `@EnableWebSecurity` + `@EnableMethodSecurity`<br>• csrf.disable / sessionManagement(STATELESS)<br>• CORS：allowedOriginPatterns=`*`，allowedMethods=GET/POST/PUT/DELETE/PATCH/OPTIONS，allowCredentials=true，maxAge=3600<br>• 白名单（permitAll）：`/api/v1/auth/register`、`/login`、`/login/send-code`、`/refresh`、`/error`、`/actuator/**`，OPTIONS 全放行<br>• anyRequest().authenticated()<br>• exceptionHandler 绑定 RestAuthenticationEntryPoint + RestAccessDeniedHandler<br>• addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)<br>• Bean：PasswordEncoder → BCryptPasswordEncoder |
+
+### 14.2 关键设计点
+- **白名单精确到接口路径**：4 个 auth 公开接口 + error + actuator，其余全部 authenticated()
+- **OPTIONS 预检放行**：`requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()`，避免浏览器 CORS 预检被 401 拦截
+- **异常处理 JSON 化**：EntryPoint + DeniedHandler 统一返回 Result JSON，替代 Spring Security 默认 HTML 登录页
+- **MethodSecurity 开启**：`@EnableMethodSecurity` 预留 `@PreAuthorize` 注解能力（后续 RBAC 模块使用）
