@@ -559,3 +559,21 @@ ERROR in ch.qos.logback.classic.PatternLayout("null") - Empty or null pattern.
 ```xml
 <pattern>${LOG_PATTERN}</pattern>
 ```
+
+---
+
+## 23. logback-spring.xml 按通用项目规范增强（适配 FitPulse）
+
+### 23.1 核心改动（与原极简版本对比）
+| 维度 | 原配置 | 新配置 |
+|---|---|---|
+| 变量 | 只有 pattern / path | 分 `CONSOLE_PATTERN`(含 `%clr` 彩色) / `FILE_PATTERN`(干净落地) / charset / cap 5项 |
+| Appender 数 | 仅 CONSOLE（控制台） | 3 个：CONSOLE + **FILE(按日+大小滚动50MB/30天/总10GB gz)** + **ERROR_FILE(LevelFilter只收ERROR)** |
+| 分包 logger | 无 | `auth=DEBUG`、`mapper=DEBUG`、`spring-security=INFO`、`jjwt=WARN`（additivity=false 避免重复打印） |
+| 环境隔离 | 无 | `<springProfile name="dev">` 业务包=DEBUG；非 dev=INFO；两份独立 root 注册 |
+| 热加载 | 无 | `scan="true" scanPeriod="30s"` 运行时可改配置不用重启 |
+| 彩色 | 无 | 控制台 `%clr(%-5level)`，Spring Boot 原生支持 |
+
+### 23.2 关键文件
+- 配置：[logback-spring.xml](file:///d:/FitPulse/fitness-backend/src/main/resources/logback-spring.xml)
+- 落地目录：项目根下 `./logs/`（fitpulse.log 当前；fitpulse.2026-08-18.0.log.gz 滚动归档；error.log 错误专档）

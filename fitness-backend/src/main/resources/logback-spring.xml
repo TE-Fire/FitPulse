@@ -1,16 +1,114 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration>
-    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"/>
+<!--
+  FitPulse Logback 配置（结合通用项目最佳实践，适配本项目）
+  - 分 springProfile：dev 环境 DEBUG、其他环境 INFO
+  - 分包 logger：auth/mapper 重点调试，Security/JWT 精简噪音
+  - FILE Appender：按日+大小滚动（50MB/30天/总10GB）
+  - ERROR Appender：单独收集 ERROR，便于快速排查
+  - 控制台：Spring Boot %clr 彩色级别
+-->
+<configuration scan="true" scanPeriod="30 seconds">
+    <!-- ================ 通用变量 ================ -->
     <property name="LOG_PATH" value="./logs"/>
+    <property name="LOG_CHARSET" value="UTF-8"/>
+    <property name="LOG_TOTAL_CAP" value="10GB"/>
+    <property name="LOG_MAX_HISTORY" value="30"/>
+    <property name="LOG_MAX_FILE_SIZE" value="50MB"/>
 
+    <!-- 控制台：带级别彩色 -->
+    <property name="CONSOLE_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %clr(%-5level) %logger{50} - %msg%n"/>
+    <!-- 文件：不带 ANSI 彩色，落地干净 -->
+    <property name="FILE_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"/>
+
+    <!-- ================ Appender 1: 控制台 ================ -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>${LOG_PATTERN}</pattern>
-            <charset>UTF-8</charset>
+            <pattern>${CONSOLE_PATTERN}</pattern>
+            <charset>${LOG_CHARSET}</charset>
         </encoder>
     </appender>
 
-    <root level="INFO">
+    <!-- ================ Appender 2: 全量文件滚动 ================ -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/fitpulse.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/fitpulse.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>${LOG_MAX_FILE_SIZE}</maxFileSize>
+            <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${LOG_TOTAL_CAP}</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${FILE_PATTERN}</pattern>
+            <charset>${LOG_CHARSET}</charset>
+        </encoder>
+    </appender>
+
+    <!-- ================ Appender 3: ERROR 单独文件滚动 ================ -->
+    <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/error.log</file>
+        <!-- 只接收 ERROR 级别 -->
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/error.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>${LOG_MAX_FILE_SIZE}</maxFileSize>
+            <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${LOG_TOTAL_CAP}</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${FILE_PATTERN}</pattern>
+            <charset>${LOG_CHARSET}</charset>
+        </encoder>
+    </appender>
+
+    <!-- ================ 分包 logger（独立 logger 配置，不依赖 yml 的 logging.level） ================ -->
+    <logger name="com.fitpulse.app.auth" level="DEBUG" additivity="false">
         <appender-ref ref="CONSOLE"/>
-    </root>
+        <appender-ref ref="FILE"/>
+        <appender-ref ref="ERROR_FILE"/>
+    </logger>
+
+    <logger name="com.fitpulse.app.mapper" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+        <appender-ref ref="ERROR_FILE"/>
+    </logger>
+
+    <logger name="org.springframework.security" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+        <appender-ref ref="ERROR_FILE"/>
+    </logger>
+
+    <logger name="io.jsonwebtoken" level="WARN" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+        <appender-ref ref="ERROR_FILE"/>
+    </logger>
+
+    <!-- ================ 分 springProfile 环境覆盖 ================ -->
+    <!-- 开发环境：业务代码 DEBUG -->
+    <springProfile name="dev">
+        <logger name="com.fitpulse.app" level="DEBUG"/>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+            <appender-ref ref="ERROR_FILE"/>
+        </root>
+    </springProfile>
+
+    <!-- 其他环境：默认 INFO 精简，仅 ERROR 文件保留全部错误 -->
+    <springProfile name="!dev">
+        <logger name="com.fitpulse.app" level="INFO"/>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+            <appender-ref ref="ERROR_FILE"/>
+        </root>
+    </springProfile>
 </configuration>
