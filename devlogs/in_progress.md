@@ -295,3 +295,61 @@
 - **OPTIONS 预检放行**：`requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()`，避免浏览器 CORS 预检被 401 拦截
 - **异常处理 JSON 化**：EntryPoint + DeniedHandler 统一返回 Result JSON，替代 Spring Security 默认 HTML 登录页
 - **MethodSecurity 开启**：`@EnableMethodSecurity` 预留 `@PreAuthorize` 注解能力（后续 RBAC 模块使用）
+
+---
+
+## 15. P1-5 DTO/VO 落地（5 个）
+
+> 所有请求 DTO 加 Jakarta Validation 注解，Controller 层 `@Valid` 触发 GlobalExceptionHandler.handleValidation。
+
+| 文件 | 关键字段 & 校验 |
+|---|---|
+| `dto/req/RegisterReq.java` | email: `@NotBlank`+`@Email`+`@Pattern(.+@qq\\.com$)`<br>password: `@NotBlank`+`@Size(8-64)`+`@Pattern(字母+数字)` |
+| `dto/req/LoginReq.java` | email: `@NotBlank`+`@Pattern(.+@qq\\.com$)`<br>type: `@NotNull Integer`<br>password: `@Size(8-64)`（type=1时Service再校验）<br>code: `@Pattern(^\\d{6}$)`（type=2时Service再校验） |
+| `dto/req/SendCodeReq.java` | email: `@NotBlank`+`@Pattern(.+@qq\\.com$)` |
+| `dto/req/RefreshReq.java` | refreshToken: `@NotBlank` |
+| `dto/vo/LoginUserVO.java` | `@Data @Builder @NoArgsConstructor @AllArgsConstructor`<br>字段：accessToken / refreshToken / userId / username |
+
+---
+
+## 16. P1-4 AuthService 业务层落地（5 方法）
+
+> `@Service @RequiredArgsConstructor`，依赖：UserMapper / JwtTokenProvider / RedisTemplate / PasswordEncoder / MailService。
+> P1 最小化：只操作 user 表 + Redis，UserProfile/UserGoal 初始化留到后续模块。
+
+### 16.1 register(RegisterReq)
+1. 邮箱唯一性检查：`userMapper.selectCount(eq(User::email, email))` > 0 → CONFLICT
+2. 生成 username：从 email @ 前缀出发，冲突追加 2/3/... 直到唯一（上限 100 次，兜底 UUID8 位）
+3. 插入 user：username / passwordHash(BCrypt.encode) / email / status=1 / lastLoginAt=null
+4. **不自动登录**，void 返回
+
+### 16.2 login(LoginReq) → LoginUserVO
+1. type 用 `LoginTypeEnum.fromCode` 校验，null → PARAM_ERROR
+2. 按 email 查 user：不存在 / status!=1 → UNAUTHORIZED（统一提示"邮箱或密码错误"防枚举）
+3. 分支：
+   - **PASSWORD**：`!passwordEncoder.matches(req.password, user.passwordHash)` → UNAUTHORIZED
+   - **VERIFY_CODE**：Redis `buildLoginCodeKey(email)` 取验证码 → null=过期、不一致=错误，成功后 **立即 delete（一次性消费）**
+4. 更新 `user.lastLoginAt=now()` → updateById
+5. 生成双 Token：`generateAccessToken` + `generateRefreshToken`（Redis 写 refresh）
+6. 组装 LoginUserVO 返回
+
+### 16.3 sendCode(SendCodeReq)
+1. **60s 防刷**：`hasKey(buildLoginCodeKey(email)+":rate")` → CONFLICT
+2. 生成 6 位随机码：`(int)((Math.random()*9+1)*100000)`（确保首位非零）
+3. Redis 双写：code(5min) + rate(60s)
+4. `log.info` 输出验证码（开发调试用）
+5. `mailService.sendMail(email, "FitPulse 登录验证码", content)` — MailService 内部判断凭据
+
+### 16.4 refresh(RefreshReq) → LoginUserVO
+1. parseToken(refreshToken)：失败 → UNAUTHORIZED("已失效请重新登录")；type != "refresh" → PARAM_ERROR
+2. `isRefreshTokenValid(userId, token)` Redis 比对：不一致 → UNAUTHORIZED
+3. selectById 查用户确认 status=1：禁用则 revoke 后抛 UNAUTHORIZED
+4. **旋转**：`revokeRefreshToken(userId)` → 删除旧的，生成一对新双 Token 写 Redis
+5. 返回 LoginUserVO
+
+### 16.5 logout(Long userId)
+- userId==null 直接返回
+- `revokeRefreshToken(userId)` 即删 Redis key，下次 refresh 即失效
+
+### 16.6 编译验证
+`mvn compile` BUILD SUCCESS（JDK 21 / 29 个源文件 / 15.9s）
