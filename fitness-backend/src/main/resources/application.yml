@@ -13,6 +13,14 @@ spring:
   profiles:
     active: dev
 
+  # ============ 排除自动装配（未开发的模块 / 与无状态JWT鉴权冲突的默认配置） ============
+  autoconfigure:
+    exclude:
+      # 无状态JWT鉴权，不需要Spring Security默认的内存UserDetails + 控制台打印随机密码
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+      # AI模块未开发前，禁用Spring AI自动装配（避免api-key为空Assert抛错导致启动失败）
+      - org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration
+
   # ============ 文件上传 ============
   servlet:
     multipart:

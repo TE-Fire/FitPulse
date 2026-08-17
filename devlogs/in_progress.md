@@ -577,3 +577,32 @@ ERROR in ch.qos.logback.classic.PatternLayout("null") - Empty or null pattern.
 ### 23.2 关键文件
 - 配置：[logback-spring.xml](file:///d:/FitPulse/fitness-backend/src/main/resources/logback-spring.xml)
 - 落地目录：项目根下 `./logs/`（fitpulse.log 当前；fitpulse.2026-08-18.0.log.gz 滚动归档；error.log 错误专档）
+
+---
+
+## 24. Spring Boot 启动阻塞项 2 项清理（AI 自动装配 + 默认密码告警）
+
+### 24.1 问题 1：Spring AI OpenAiAutoConfiguration Bean 创建失败
+```
+BeanCreationException: openAiChatModel → Assert.hasText(apiKey) fail
+message: OpenAI API key must be set.
+```
+AI 模块（设计契约 6.6 节）还没开发，但 pom 引入了 `spring-ai-openai-spring-boot-starter` → 自动装配无条件生效 → dev.yml 中 `api-key:` 空字符串直接触发 `IllegalArgumentException`。
+
+### 24.2 问题 2：UserDetailsService 默认内存用户 + 控制台打印随机密码
+```
+Using generated security password: 876e3b30-c5ef-493b-89f2-2ee1a2a61a03
+```
+FitPulse 是无状态 JWT 鉴权（JwtAuthFilter + SecurityContextHolder 写入），完全不需要 Spring Security 的 FormLogin/UserDetailsService 默认体系，该自动配置纯属噪音。
+
+### 24.3 修复（1 处改动，application.yml spring 块）
+追加 `spring.autoconfigure.exclude` 列表：
+```yaml
+autoconfigure:
+  exclude:
+    # 1. 关闭默认密码生成（与JWT无状态鉴权冲突）
+    - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+    # 2. 关闭Spring AI自动装配（未开发前避免api-key空Assert）
+    - org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration
+```
+> 后续开发 AI 模块时：从 exclude 列表移除 OpenAiAutoConfiguration 行，在 application-dev.yml 填真实 `spring.ai.openai.api-key` 即可。
