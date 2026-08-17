@@ -499,3 +499,38 @@ P1-4 阶段 AuthService 直接写成具体类（`@Service` 注解在类上），
 
 ### 20.4 编译验证
 `mvn compile` BUILD SUCCESS（JDK 21 / 7.1s）
+
+---
+
+## 21. YML 多环境拆分 + schema.sql 编码修复 + 设计契约对齐
+
+### 21.1 YML 多环境拆分（3 文件）
+
+| 文件 | 用途 | git 状态 |
+|---|---|---|
+| `application.yml` | 公共配置（server/Jackson/MyBatis-Plus/JWT 过期时间/AI 提示词模板），无敏感信息 | ✅ 提交 |
+| `application-dev.yml` | 开发环境真实凭据（MySQL 密码、QQ 邮箱 `3037749727@qq.com` + 授权码、MinIO 密钥、JWT secret） | ❌ gitignore 忽略 |
+| `application-demo.yml` | 演示模板，所有凭据为 `<占位符>`，供他人参考复制 | ✅ 提交 |
+
+`.gitignore` 追加规则：`application-dev.yml` / `application-prod.yml` / `application-local.yml`
+
+### 21.2 schema.sql 编码损坏修复 + 设计契约对齐
+
+**问题**：原 schema.sql 存在严重编码损坏（字段首字母丢失，如 `food` → `ood`、`record` → `ecord`、`body` → `ody`、`name` → `ame`、`total` → `otal` 等），且表结构与设计契约第 2.2 节 DDL 差异巨大。
+
+**方案**：以 [设计契约.md](file:///d:/FitPulse/docs/设计契约.md#L49-L243) 的 DDL 为唯一基准，完全重写 schema.sql 13 张表。
+
+**关键对齐点**：
+- `user` 表：移除 nickname/avatar_url（归 user_profile）
+- `user_profile`：补 nickname/avatar_url/bio，移除 activity_level/dark_mode
+- `user_goal`：补 target_body_fat/weekly_workouts/daily_water_ml/start_date/target_date，移除 start_weight_kg/protein_g_per_kg
+- `exercise`：用 is_system/user_id/image_url/description 替换 cover_url/video_url/steps/tips
+- `workout_plan`：简化为 name/plan_type/estimated_min，移除 days_per_week/duration_days/is_template/difficulty
+- `workout_plan_exercise`：用 sort_order 替换 day_no/order_no
+- `workout_record`：用 record_date/duration_sec/total_volume/total_sets/total_reps 替换 start_time/end_time/duration_min
+- `workout_set`：补 is_warmup/rpe，移除 is_pr/duration_sec
+- `body_metric`：简化为 weight/body_fat/muscle/bmi/waist，移除 chest/hip/arm/thigh/calf/neck
+- `food`：用 is_system/kcal_per_100g 替换 is_custom/serving_unit，移除 alias/barcode
+- `meal_record`：用 quantity_g 替换 serving_g
+- `water_log`：简化为 amount_ml，移除 drink_time
+- `file_resource`：用 bucket/object_key/file_size/file_url 替换 object_name/size_bytes/file_md5/biz_type

@@ -1,0 +1,66 @@
+# ============================================================
+# FitPulse 演示环境配置模板（占位符，安全提交到 git 供他人参考）
+# 使用方式：复制本文件为 application-dev.yml / application-prod.yml，
+#           将 <占位符> 替换为真实值后即可使用。
+# ============================================================
+
+spring:
+  # ============ 数据源 ============
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/fitpulse_db?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: <your-mysql-username>
+    password: <your-mysql-password>
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 600000
+      pool-name: FitPulseHikariCP
+
+  # ============ Redis ============
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: <your-redis-password>
+      database: 0
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  # ============ Spring AI (DeepSeek OpenAI 兼容接口) ============
+  ai:
+    openai:
+      api-key: <your-deepseek-api-key>
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model: deepseek-chat
+          temperature: 0.7
+          max-tokens: 4096
+
+# ============ 环境敏感配置 ============
+fitpulse:
+  jwt:
+    secret: <your-jwt-secret-key-at-least-256-bits>
+
+  # ============ MinIO ============
+  minio:
+    endpoint: http://127.0.0.1:9000
+    access-key: <your-minio-access-key>
+    secret-key: <your-minio-secret-key>
+    bucket: fitpulse-assets
+    public-base-url: http://127.0.0.1:9000/fitpulse-assets
+
+  # ============ 邮件配置（QQ SMTP） ============
+  mail:
+    smtp-host: smtp.qq.com
+    smtp-port: 465
+    username: <your-email@qq.com>
+    password: <your-email-authorization-code>
+    encoding: UTF-8
+    timeout: 5000
+    sender-name: FitPulse

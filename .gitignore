@@ -1,4 +1,4 @@
-﻿# =========================
+# =========================
 # 后端 - Java / Spring Boot / Maven
 # =========================
 *.class
@@ -103,3 +103,10 @@ $RECYCLE.BIN/
 *.env.development.local
 *.env.production.local
 *.env.*.local
+
+# =========================
+# Spring Boot 环境配置文件（含真实凭据，不提交）
+# =========================
+application-dev.yml
+application-prod.yml
+application-local.yml
