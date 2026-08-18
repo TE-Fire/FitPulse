@@ -107,7 +107,7 @@ public class RequestLogAspect {
             sb.append(ann.value()).append(' ');
         }
 
-        // Controller#方法
+        // Controller#方法 
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
         sb.append(method.getDeclaringClass().getSimpleName())
@@ -116,7 +116,7 @@ public class RequestLogAspect {
 
         // 参数
         if (ann.logArgs()) {
-            String paramsJson = buildParamsJson(joinPoint, request, ann);
+            String paramsJson = buildParamsJson(joinPoint, ann, request);
             sb.append(" params=").append(paramsJson);
         }
 
