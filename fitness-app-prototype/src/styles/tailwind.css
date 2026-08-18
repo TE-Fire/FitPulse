@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #app {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    @apply font-sans text-slate-800 antialiased;
+    background: #e9ebf0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  /* 页面通用容器:撑满手机框 + 提供内边距 + 留出底部导航高度 */
+  .page {
+    @apply min-h-screen flex flex-col;
+    padding-bottom: 72px; /* BottomNav 高度 + 安全区 */
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+  /* 页面顶部 Header */
+  .page-header {
+    @apply px-5 pt-6 pb-4;
+  }
+  /* 卡片基类 */
+  .card {
+    @apply bg-white rounded-2xl shadow-soft;
+  }
+}

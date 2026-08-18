@@ -86,3 +86,52 @@
 - Element Plus dark css-vars 在控制台偶现 ERR_ABORTED，不影响渲染（el-icon / ElMessage 正常），暂不处理
 - dev server 仍在运行（localhost:5173），便于用户继续联调
 
+---
+
+## 五、移动端高保真原型开发（fitness-app-prototype）
+
+> 会话主题：基于设计契约实现 FitPulse 移动端高保真交互原型（Vue 3 + Vite + Tailwind）
+> 起始时间：2026-08-18
+> 状态：原型骨架完成，待后续后端进度跟上后逐个完善对接
+
+### 5.1 背景与决策
+- 用户无安卓开发经验，经全景介绍 + 多方案对比（原生 Kotlin / Flutter / React Native / Capacitor+Vue / uni-app / PWA），确认采用 **Capacitor + Vue** 方案：复用 Vue 技术栈，浏览器调试 + 打包 APK
+- 原型先于 Capacitor 接入，先产出高保真原型供用户审阅交互与视觉
+- 视觉风格：明亮清新（白底 + 品牌紫 #7c5cff / 青 #22d3ee 点缀）
+- 设计契约遵循：API 统一前缀 `/api/v1`、看板维度配色（A 紫 / B 蓝 / C 绿 / D 橙）、底部导航 4 项（训练/健康/AI/我的）
+
+### 5.2 工程结构
+```
+fitness-app-prototype/
+├── src/
+│   ├── api/        (auth/dashboard/user/ai 接口封装)
+│   ├── components/ (Layout 底部导航)
+│   ├── mock/       (模拟数据)
+│   ├── router/     (路由配置)
+│   ├── stores/     (Pinia 用户状态)
+│   ├── styles/     (Tailwind 入口)
+│   ├── utils/      (request 请求封装)
+│   └── views/      (Login/Home/Health/Ai/Profile 5 页)
+├── package.json    (vue3/vite5/tailwind3/echarts5/pinia2)
+├── vite.config.js  (端口 5174, base './')
+└── tailwind.config.js (品牌色 + 维度色 + 动画)
+```
+
+### 5.3 任务清单与完成情况
+1. ✅ 设计信息架构与冻结 Design Contract（路由 / 配色 / 维度高亮规则）
+2. ✅ 创建工程骨架（package.json / vite.config / tailwind.config / postcss）
+3. ✅ 实现共享层：main.js / App.vue / router / Layout（底部导航）/ mock / api / stores
+4. ✅ 实现登录页 [Login.vue](file:///d:/FitPulse/fitness-app-prototype/src/views/Login.vue)
+5. ✅ 实现训练看板页 [Home.vue](file:///d:/FitPulse/fitness-app-prototype/src/views/Home.vue)（B 蓝·本周训练容量 + C 绿·7 天容量趋势 ECharts 折线）
+6. ✅ 实现健康看板页 [Health.vue](file:///d:/FitPulse/fitness-app-prototype/src/views/Health.vue)（A 紫·30 天体重趋势 + B 橙·7 天热量摄入柱状）
+7. ✅ 实现 AI 顾问页 [Ai.vue](file:///d:/FitPulse/fitness-app-prototype/src/views/Ai.vue)（聊天气泡 + 建议按钮 + 思考指示器）
+8. ✅ 实现个人中心页 [Profile.vue](file:///d:/FitPulse/fitness-app-prototype/src/views/Profile.vue)（用户信息 / 目标 / 基础数据 / 功能入口）
+9. ✅ 静态自审 + 构建验证：`npm install` 115 包成功；`npm run build` 605 模块编译通过，产物输出 dist/（仅 ECharts chunk 大小警告，非错误）
+10. ✅ Vite dev server 启动成功：http://localhost:5174/
+
+### 5.4 待后续完善
+- 后端 dashboard/training/health/ai/user 接口实现后，将 mock 切换为真实 API
+- Capacitor 接入打包 APK
+- 各页面交互细节打磨（根据用户预览反馈）
+
+
