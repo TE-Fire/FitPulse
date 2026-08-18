@@ -26,6 +26,12 @@ const routes = [
     component: () => import('@/views/home/Home.vue'),
     meta: { title: '首页', requiresAuth: true }
   },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('@/views/auth/ForgotPassword.vue'),
+    meta: { title: '找回密码' }
+  },
   { path: '/', redirect: '/home' },
   { path: '/:pathMatch(.*)*', redirect: '/login' }
 ]

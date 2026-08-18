@@ -89,7 +89,11 @@
               <el-icon :size="16"><View v-if="showPassword" /><Hide v-else /></el-icon>
             </button>
           </div>
-          <p v-if="errors.password" class="text-xs text-red-500 mt-1.5">{{ errors.password }}</p>
+          <div class="flex justify-between items-center mt-1.5">
+            <p v-if="errors.password" class="text-xs text-red-500">{{ errors.password }}</p>
+            <span v-else></span>
+            <router-link to="/forgot-password" class="text-xs text-slate-400 hover:text-pulse transition">忘记密码？</router-link>
+          </div>
         </div>
 
         <!-- 验证码登录 -->
@@ -246,7 +250,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -293,6 +297,14 @@ const sendingCode = ref(false)
 const countdown = ref(0)
 const devCode = ref('') // 开发联调明文验证码
 let cdTimer = null
+
+// 重置密码成功跳回登录页时，从 query.email 预填邮箱
+function applyPrefillEmail() {
+  const e = route.query.email
+  if (typeof e === 'string' && e) form.email = e
+}
+onMounted(applyPrefillEmail)
+watch(() => route.query.email, applyPrefillEmail)
 
 // 统一 input 样式
 function inputClass(field) {

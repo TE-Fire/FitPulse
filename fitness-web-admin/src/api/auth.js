@@ -38,3 +38,14 @@ export function refreshToken(refreshToken) {
 export function logout() {
   return request.post('/api/v1/auth/logout')
 }
+
+/** 发送密码重置验证码 POST /auth/forgot-password/send-code  body:{email} —— 邮箱须已注册（404） */
+export function forgotPasswordSendCode(email) {
+  return request.post('/api/v1/auth/forgot-password/send-code', { email })
+}
+
+/** 重置密码 POST /auth/forgot-password/reset  body:{email,code,newPassword,confirmPassword} —— 不自动登录 */
+export function forgotPasswordReset(data) {
+  return request.post('/api/v1/auth/forgot-password/reset', data)
+}
+
