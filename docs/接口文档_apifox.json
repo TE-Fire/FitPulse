@@ -97,11 +97,11 @@
           "code": {
             "type": "integer",
             "format": "int32",
-            "example": 0
+            "example": 200
           },
           "message": {
             "type": "string",
-            "example": "success"
+            "example": "操作成功"
           },
           "data": {
             "nullable": true
@@ -2873,8 +2873,8 @@
                   ]
                 },
                 "example": {
-                  "code": 0,
-                  "message": "success",
+                  "code": 200,
+                  "message": "操作成功",
                   "data": {
                     "code": "482917",
                     "expireMinutes": 5,
@@ -2919,8 +2919,8 @@
                   "$ref": "#/components/schemas/Result"
                 },
                 "example": {
-                  "code": 0,
-                  "message": "success",
+                  "code": 200,
+                  "message": "操作成功",
                   "data": null,
                   "timestamp": 1755410000000
                 }
@@ -3029,8 +3029,8 @@
                   ]
                 },
                 "example": {
-                  "code": 0,
-                  "message": "success",
+                  "code": 200,
+                  "message": "操作成功",
                   "data": {
                     "code": "952764",
                     "expireMinutes": 5,

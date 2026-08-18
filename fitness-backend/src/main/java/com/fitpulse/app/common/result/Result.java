@@ -1,12 +1,16 @@
 package com.fitpulse.app.common.result;
 
-import com.fitpulse.app.common.enums.ErrorCodeEnum;
 import com.fitpulse.app.common.exception.BaseExceptionInterface;
 import com.fitpulse.app.common.exception.BusinessException;
 import lombok.Data;
 
 @Data
 public class Result<T> {
+
+    /** 成功业务码（与 HTTP 200 OK 对齐，不放在错误枚举里） */
+    public static final int SUCCESS_CODE = 200;
+    /** 成功默认文案 */
+    public static final String SUCCESS_MESSAGE = "操作成功";
 
     private Integer code;
     private String message;
@@ -19,15 +23,15 @@ public class Result<T> {
 
     public static <T> Result<T> success() {
         Result<T> result = new Result<>();
-        result.setCode(ErrorCodeEnum.SUCCESS.getErrorCode());
-        result.setMessage(ErrorCodeEnum.SUCCESS.getErrorMessage());
+        result.setCode(SUCCESS_CODE);
+        result.setMessage(SUCCESS_MESSAGE);
         return result;
     }
 
     public static <T> Result<T> success(T data) {
         Result<T> result = new Result<>();
-        result.setCode(ErrorCodeEnum.SUCCESS.getErrorCode());
-        result.setMessage(ErrorCodeEnum.SUCCESS.getErrorMessage());
+        result.setCode(SUCCESS_CODE);
+        result.setMessage(SUCCESS_MESSAGE);
         result.setData(data);
         return result;
     }

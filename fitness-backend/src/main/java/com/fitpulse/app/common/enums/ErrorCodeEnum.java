@@ -4,11 +4,14 @@ import com.fitpulse.app.common.exception.BaseExceptionInterface;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+/**
+ * 全局错误码枚举（只放错误场景，不含成功状态）。
+ * <p>HTTP 语义大类码：4xx 客户端 / 5xx 服务端；成功码 200 由 Result.SUCCESS_CODE 单独定义。
+ */
 @Getter
 @AllArgsConstructor
 public enum ErrorCodeEnum implements BaseExceptionInterface {
 
-    SUCCESS(0, "操作成功"),
     PARAM_ERROR(400, "参数错误"),
     UNAUTHORIZED(401, "未登录或Token无效"),
     FORBIDDEN(403, "无访问权限"),
