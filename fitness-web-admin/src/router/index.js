@@ -1,4 +1,4 @@
-﻿import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 import { useUserStore } from '@/stores/user'
@@ -6,22 +6,28 @@ import { useUserStore } from '@/stores/user'
 NProgress.configure({ showSpinner: false })
 
 const routes = [
-  { path: '/login', name: 'Login', component: () => import('@/views/auth/Login.vue'), meta: { title: '登录' } },
   {
-    path: '/',
-    component: () => import('@/layout/AdminLayout.vue'),
-    redirect: '/dashboard',
-    meta: { requiresAuth: true },
-    children: [
-      { path: 'dashboard', name: 'Dashboard', component: () => import('@/views/dashboard/Index.vue'), meta: { title: '数据看板' } },
-      { path: 'content/exercises', name: 'ContentExercises', component: () => import('@/views/content/Exercises.vue'), meta: { title: '动作库' } },
-      { path: 'content/plans', name: 'ContentPlans', component: () => import('@/views/content/Plans.vue'), meta: { title: '训练模板' } },
-      { path: 'content/foods', name: 'ContentFoods', component: () => import('@/views/content/Foods.vue'), meta: { title: '食物库' } },
-      { path: 'content/files', name: 'ContentFiles', component: () => import('@/views/content/Files.vue'), meta: { title: '文件资源' } },
-      { path: 'profile', name: 'Profile', component: () => import('@/views/Profile.vue'), meta: { title: '个人中心' } }
-    ]
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/auth/AuthPage.vue'),
+    props: { mode: 'login' },
+    meta: { title: '登录' }
   },
-  { path: '/:pathMatch(.*)*', redirect: '/dashboard' }
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('@/views/auth/AuthPage.vue'),
+    props: { mode: 'register' },
+    meta: { title: '注册' }
+  },
+  {
+    path: '/home',
+    name: 'Home',
+    component: () => import('@/views/home/Home.vue'),
+    meta: { title: '首页', requiresAuth: true }
+  },
+  { path: '/', redirect: '/home' },
+  { path: '/:pathMatch(.*)*', redirect: '/login' }
 ]
 
 const router = createRouter({
@@ -32,11 +38,16 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   NProgress.start()
   document.title = (to.meta.title ? to.meta.title + ' · ' : '') + 'FitPulse'
-  if (to.meta.requiresAuth) {
-    const store = useUserStore()
-    if (!store.token) { next({ name: 'Login', query: { redirect: to.fullPath } }) }
-    else next()
-  } else next()
+  const store = useUserStore()
+  // 已登录用户访问登录/注册页 → 直接回首页
+  if ((to.name === 'Login' || to.name === 'Register') && store.isLogin) {
+    return next({ name: 'Home' })
+  }
+  // 受保护路由未登录 → 跳登录并记 redirect
+  if (to.meta.requiresAuth && !store.isLogin) {
+    return next({ name: 'Login', query: { redirect: to.fullPath } })
+  }
+  next()
 })
 router.afterEach(() => NProgress.done())
 

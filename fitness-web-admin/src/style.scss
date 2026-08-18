@@ -1,7 +1,12 @@
-﻿* { box-sizing: border-box; }
-html, body, #app { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+/* FitPulse 全局基础样式 —— 仅保留 auth 链路所需 */
 
-.fitpulse-color-primary { --el-color-primary: #7c5cff; }
+* { box-sizing: border-box; }
+html, body, #app {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
 
 :root {
   --fit-brand: #7c5cff;
@@ -10,58 +15,35 @@ html, body, #app { margin: 0; padding: 0; height: 100%; font-family: -apple-syst
   --fit-success: #10b981;
 }
 
-.layout-container { height: 100%; }
-.layout-aside {
-  background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
-  color: #e0e7ff;
+/* Element Plus 主色对齐品牌紫（按钮/链接/聚焦等） */
+.fitpulse-color-primary {
+  --el-color-primary: #7c5cff;
 }
-.logo-box {
-  display: flex; align-items: center; gap: 10px;
-  padding: 20px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  font-weight: 700; font-size: 18px; color: white;
-}
-.logo-box .logo-dot {
-  width: 32px; height: 32px; border-radius: 8px;
-  background: linear-gradient(135deg, var(--fit-brand), var(--fit-brand-2));
-  display: flex; align-items: center; justify-content: center;
-  font-size: 16px;
-}
-.layout-header {
-  border-bottom: 1px solid #eef0f4;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 24px; background: white;
-}
-.page-content { padding: 20px 24px; background: #f6f7fb; min-height: calc(100vh - 60px); }
 
-.login-wrap {
+/* 登录/注册页外层 —— 极简清新健康风：浅色渐变背景 */
+.auth-wrap {
   min-height: 100vh;
-  background: linear-gradient(135deg, #7c5cff 0%, #22d3ee 100%);
-  display: flex; align-items: center; justify-content: center; padding: 20px;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(124, 92, 255, 0.08), transparent 60%),
+    radial-gradient(900px 500px at 110% 110%, rgba(34, 211, 238, 0.10), transparent 60%),
+    linear-gradient(180deg, #f8fafc 0%, #ffffff 50%, #f0f9ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
 }
-.login-card {
-  width: 100%; max-width: 420px;
-  border-radius: 20px;
-  box-shadow: 0 24px 60px rgba(30,27,75,0.25);
-}
-.stat-card {
-  border-radius: 14px; padding: 20px;
-  background: white;
-  border: 1px solid #eef0f4;
-  transition: all 0.2s;
-}
-.stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(30,27,75,0.08); }
-.stat-card .label { color: #64748b; font-size: 13px; margin-bottom: 6px; }
-.stat-card .value { font-size: 28px; font-weight: 700; color: #0f172a; }
-.stat-card .delta { margin-top: 6px; font-size: 12px; }
-.chart-card { border-radius: 14px; padding: 20px; background: white; border: 1px solid #eef0f4; }
-.chart-card-title { font-weight: 600; margin-bottom: 12px; font-size: 15px; }
 
-.el-menu-vertical-demo { background: transparent !important; border: none !important; }
-.el-menu-vertical-demo .el-menu-item,
-.el-menu-vertical-demo .el-sub-menu__title { color: #c7d2fe !important; }
-.el-menu-vertical-demo .el-menu-item.is-active {
-  background: rgba(255,255,255,0.08) !important;
-  color: white !important;
-  border-right: 3px solid var(--fit-brand-2);
+/* 登录卡片：白底 + 细边 + 柔和阴影 + 圆角 */
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #eef0f4;
+  box-shadow: 0 24px 60px -12px rgba(30, 27, 75, 0.18);
 }
+
+/* 滚动条美化（可选） */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
