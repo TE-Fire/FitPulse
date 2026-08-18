@@ -2,9 +2,7 @@ package com.fitpulse.app.common.exception;
 
 public interface BaseExceptionInterface {
 
-    // 获取异常码
-    String getErrorCode();
+    Integer getErrorCode();
 
-    // 获取异常信息
     String getErrorMessage();
 }

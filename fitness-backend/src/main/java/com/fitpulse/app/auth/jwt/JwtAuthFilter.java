@@ -61,7 +61,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(auth);
         } catch (Exception e) {
             // 解析失败：清空上下文，放行交给 Security 链处理（未登录访问受保护接口会被 401）
-            log.debug("[JWT] 鉴权失败: {}", e.getMessage());
+            log.warn("[JWT] 鉴权失败: {}", e.getMessage());
             SecurityContextHolder.clearContext();
         }
         filterChain.doFilter(request, response);

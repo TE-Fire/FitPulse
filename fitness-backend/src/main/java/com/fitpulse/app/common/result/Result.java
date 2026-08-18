@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 public class Result<T> {
 
-    private String code;
+    private Integer code;
     private String message;
     private T data;
     private long timestamp;
@@ -53,7 +53,7 @@ public class Result<T> {
         return result;
     }
 
-    public static <T> Result<T> fail(String code, String message) {
+    public static <T> Result<T> fail(Integer code, String message) {
         Result<T> result = new Result<>();
         result.setCode(code);
         result.setMessage(message);

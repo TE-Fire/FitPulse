@@ -5,7 +5,7 @@ import lombok.Getter;
 @Getter
 public class BaseException extends RuntimeException implements BaseExceptionInterface {
 
-    private final String code;
+    private final Integer code;
 
     public BaseException(BaseExceptionInterface errorCode) {
         super(errorCode.getErrorMessage());
@@ -17,13 +17,13 @@ public class BaseException extends RuntimeException implements BaseExceptionInte
         this.code = errorCode.getErrorCode();
     }
 
-    public BaseException(String code, String message) {
+    public BaseException(Integer code, String message) {
         super(message);
         this.code = code;
     }
 
     @Override
-    public String getErrorCode() {
+    public Integer getErrorCode() {
         return this.code;
     }
 
