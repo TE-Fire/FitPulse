@@ -1206,6 +1206,60 @@
           "expireMinutes": 5,
           "rateLimitSeconds": 60
         }
+      },
+      "ForgotPasswordSendCodeReq": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "pattern": "^[^@]+@qq\\.com$",
+            "description": "已注册的 QQ 邮箱（发送密码重置验证码）"
+          }
+        },
+        "example": {
+          "email": "fire_dev@qq.com"
+        }
+      },
+      "ForgotPasswordResetReq": {
+        "type": "object",
+        "required": [
+          "email",
+          "code",
+          "newPassword",
+          "confirmPassword"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "pattern": "^[^@]+@qq\\.com$",
+            "description": "QQ 邮箱"
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^\\d{6}$",
+            "description": "密码重置验证码（先调 /auth/forgot-password/send-code 获取）"
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 64,
+            "pattern": "^(?=.*[A-Za-z])(?=.*\\d).{8,}$",
+            "description": "新密码（8-64位，需同时包含字母和数字）"
+          },
+          "confirmPassword": {
+            "type": "string",
+            "description": "确认新密码（必须与 newPassword 一致）"
+          }
+        },
+        "example": {
+          "email": "fire_dev@qq.com",
+          "code": "730125",
+          "newPassword": "Fire@2026",
+          "confirmPassword": "Fire@2026"
+        }
       }
     }
   },
@@ -3080,6 +3134,105 @@
                       }
                     }
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/forgot-password/send-code": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "发送密码重置验证码（邮箱必须已注册）",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordSendCodeReq"
+              },
+              "example": {
+                "email": "fire_dev@qq.com"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/SendCodeResp"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "example": {
+                  "code": 200,
+                  "message": "操作成功",
+                  "data": {
+                    "code": "730125",
+                    "expireMinutes": 5,
+                    "rateLimitSeconds": 60
+                  },
+                  "timestamp": 1755410000000
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/forgot-password/reset": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "重置密码（校验验证码+两次密码一致后更新密码，不自动登录）",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordResetReq"
+              },
+              "example": {
+                "email": "fire_dev@qq.com",
+                "code": "730125",
+                "newPassword": "Fire@2026",
+                "confirmPassword": "Fire@2026"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                },
+                "example": {
+                  "code": 200,
+                  "message": "操作成功",
+                  "data": null,
+                  "timestamp": 1755410000000
                 }
               }
             }

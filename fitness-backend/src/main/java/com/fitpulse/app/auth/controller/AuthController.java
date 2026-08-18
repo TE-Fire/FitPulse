@@ -1,5 +1,7 @@
 package com.fitpulse.app.auth.controller;
 
+import com.fitpulse.app.auth.dto.req.ForgotPasswordResetReq;
+import com.fitpulse.app.auth.dto.req.ForgotPasswordSendCodeReq;
 import com.fitpulse.app.auth.dto.req.LoginReq;
 import com.fitpulse.app.auth.dto.req.RefreshReq;
 import com.fitpulse.app.auth.dto.req.RegisterReq;
@@ -19,7 +21,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Auth 模块入口。
- * <p>白名单接口（SecurityConfig permitAll）：/register /register/send-code /login /login/send-code /refresh。
+ * <p>白名单接口（SecurityConfig permitAll）：/register /register/send-code /login /login/send-code /refresh
+ *   /forgot-password/send-code /forgot-password/reset。
  * <p>需认证接口：/logout（任何当前已登录用户都能调用自己的登出）。
  */
 @RestController
@@ -85,6 +88,26 @@ public class AuthController {
     public Result<Void> logout() {
         Long userId = CurrentUser.getUserId();
         authService.logout(userId);
+        return Result.success();
+    }
+
+    /**
+     * 发送密码重置验证码（开放接口）。
+     * <p>邮箱必须已注册；60 秒内重复发送会被限流；key 前缀与注册/登录完全隔离。
+     * <p>返回体 data.code 与控制台 log.info 输出、邮件正文、Redis 存储值完全一致，便于本地/演示联调。
+     */
+    @PostMapping("/forgot-password/send-code")
+    public Result<SendCodeResp> forgotPasswordSendCode(@Valid @RequestBody ForgotPasswordSendCodeReq req) {
+        return Result.success(authService.forgotPasswordSendCode(req));
+    }
+
+    /**
+     * 重置密码（开放接口）。
+     * <p>校验密码重置验证码 + 两次密码一致后更新密码，不自动登录，前端跳转登录页。
+     */
+    @PostMapping("/forgot-password/reset")
+    public Result<Void> forgotPasswordReset(@Valid @RequestBody ForgotPasswordResetReq req) {
+        authService.forgotPasswordReset(req);
         return Result.success();
     }
 }

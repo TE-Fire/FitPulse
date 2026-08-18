@@ -1,5 +1,7 @@
 package com.fitpulse.app.auth.service;
 
+import com.fitpulse.app.auth.dto.req.ForgotPasswordResetReq;
+import com.fitpulse.app.auth.dto.req.ForgotPasswordSendCodeReq;
 import com.fitpulse.app.auth.dto.req.LoginReq;
 import com.fitpulse.app.auth.dto.req.RefreshReq;
 import com.fitpulse.app.auth.dto.req.RegisterReq;
@@ -9,7 +11,7 @@ import com.fitpulse.app.auth.dto.vo.LoginUserVO;
 import com.fitpulse.app.auth.dto.vo.SendCodeResp;
 
 /**
- * Auth 业务接口：注册 / 登录 / 发送验证码 / 刷新 / 登出。
+ * Auth 业务接口：注册 / 登录 / 发送验证码 / 刷新 / 登出 / 忘记密码。
  * <p>Controller 面向此接口注入，Spring 自动装配 impl 包下的实现类。
  */
 public interface AuthService {
@@ -45,4 +47,15 @@ public interface AuthService {
      * 登出：删除 Redis 中的 refreshToken（下次 refresh 即失效）。
      */
     void logout(Long userId);
+
+    /**
+     * 发送 6 位密码重置验证码到 QQ 邮箱（60s 内防刷，key 前缀与注册/登录完全隔离）。
+     * <p>邮箱必须已注册；返回响应对象中 code 明文与控制台日志、邮件正文、Redis 存储值一致。
+     */
+    SendCodeResp forgotPasswordSendCode(ForgotPasswordSendCodeReq req);
+
+    /**
+     * 重置密码（校验验证码 + 两次密码一致后更新 user.passwordHash，不自动登录）。
+     */
+    void forgotPasswordReset(ForgotPasswordResetReq req);
 }

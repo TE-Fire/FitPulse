@@ -19,6 +19,7 @@ public enum AuthErrorCode implements BaseExceptionInterface {
     EMAIL_ALREADY_REGISTERED(409, "邮箱已注册"),
     SEND_CODE_TOO_FREQUENT(409, "发送过于频繁，请60秒后再试"),
     REGISTER_SEND_CODE_TOO_FREQUENT(409, "注册验证码发送过于频繁，请60秒后再试"),
+    FORGOT_PASSWORD_SEND_CODE_TOO_FREQUENT(409, "密码重置验证码发送过于频繁，请60秒后再试"),
 
     // ========== 400 参数类 ==========
     INVALID_LOGIN_TYPE(400, "登录类型非法"),
@@ -27,6 +28,9 @@ public enum AuthErrorCode implements BaseExceptionInterface {
     REGISTER_CODE_EMPTY(400, "注册验证码不能为空"),
     REGISTER_CODE_FORMAT_ERROR(400, "注册验证码应为6位数字"),
     NOT_REFRESH_TOKEN(400, "不是有效的refreshToken"),
+    FORGOT_PASSWORD_CODE_EMPTY(400, "密码重置验证码不能为空"),
+    FORGOT_PASSWORD_CODE_FORMAT_ERROR(400, "密码重置验证码应为6位数字"),
+    PASSWORD_CONFIRM_NOT_MATCH(400, "两次输入的密码不一致"),
 
     // ========== 401 未认证类 ==========
     EMAIL_OR_PASSWORD_ERROR(401, "邮箱或密码错误"),
@@ -35,7 +39,12 @@ public enum AuthErrorCode implements BaseExceptionInterface {
     REGISTER_CODE_EXPIRED(401, "注册验证码已过期"),
     REGISTER_CODE_ERROR(401, "注册验证码错误"),
     REFRESH_TOKEN_INVALID(401, "refreshToken已失效，请重新登录"),
-    ACCOUNT_DISABLED(401, "账号已禁用，请重新登录");
+    ACCOUNT_DISABLED(401, "账号已禁用，请重新登录"),
+    FORGOT_PASSWORD_CODE_EXPIRED(401, "密码重置验证码已过期"),
+    FORGOT_PASSWORD_CODE_ERROR(401, "密码重置验证码错误"),
+
+    // ========== 404 资源不存在 ==========
+    EMAIL_NOT_FOUND(404, "邮箱未注册");
 
     private final Integer errorCode;
     private final String errorMessage;

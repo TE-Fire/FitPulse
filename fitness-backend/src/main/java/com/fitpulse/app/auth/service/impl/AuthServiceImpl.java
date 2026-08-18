@@ -1,6 +1,8 @@
 package com.fitpulse.app.auth.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fitpulse.app.auth.dto.req.ForgotPasswordResetReq;
+import com.fitpulse.app.auth.dto.req.ForgotPasswordSendCodeReq;
 import com.fitpulse.app.auth.dto.req.LoginReq;
 import com.fitpulse.app.auth.dto.req.RefreshReq;
 import com.fitpulse.app.auth.dto.req.RegisterReq;
@@ -331,5 +333,101 @@ public class AuthServiceImpl implements AuthService {
         }
         jwtTokenProvider.revokeRefreshToken(userId);
         log.info("[登出] userId={}", userId);
+    }
+
+    // ============================== 忘记密码 ==============================
+
+    @Override
+    public SendCodeResp forgotPasswordSendCode(ForgotPasswordSendCodeReq req) {
+        String email = req.getEmail();
+
+        // 1. 邮箱必须已注册（未注册 → 404，不防枚举攻击因为用户在找回自己的账号）
+        User user = userMapper.selectOne(
+                new LambdaQueryWrapper<User>().eq(User::getEmail, email)
+        );
+        if (user == null) {
+            throw new BusinessException(AuthErrorCode.EMAIL_NOT_FOUND);
+        }
+
+        // 2. 60 秒防刷（key 前缀与注册/登录完全隔离）
+        String rateKey = RedisKeyConstants.buildForgotPasswordCodeKey(email) + ":rate";
+        Boolean rateExisted = redisTemplate.hasKey(rateKey);
+        if (Boolean.TRUE.equals(rateExisted)) {
+            throw new BusinessException(AuthErrorCode.FORGOT_PASSWORD_SEND_CODE_TOO_FREQUENT);
+        }
+
+        // 3. 生成 6 位验证码（首位非零）
+        String code = String.valueOf((int) ((Math.random() * 9 + 1) * 100_000));
+
+        // 4. 存 Redis：密码重置验证码独立前缀
+        redisTemplate.opsForValue().set(
+                RedisKeyConstants.buildForgotPasswordCodeKey(email),
+                code,
+                CODE_EXPIRE_MIN,
+                TimeUnit.MINUTES
+        );
+        redisTemplate.opsForValue().set(rateKey, "1", CODE_RATE_LIMIT_SEC, TimeUnit.SECONDS);
+
+        // 5. 开发期日志输出（与 SendCodeResp.code、邮件正文、Redis 值完全一致）
+        log.info("[密码重置验证码] email={}, code={}", email, code);
+
+        // 6. 邮件发送：密码重置场景专属主题
+        String content = String.format(
+                "您的 FitPulse 密码重置验证码是：%s，5 分钟内有效，请勿泄露给他人。",
+                code
+        );
+        mailService.sendMail(email, "FitPulse 密码重置验证码", content);
+
+        return SendCodeResp.builder()
+                .code(code)
+                .expireMinutes(CODE_EXPIRE_MIN)
+                .rateLimitSeconds(CODE_RATE_LIMIT_SEC)
+                .build();
+    }
+
+    @Override
+    public void forgotPasswordReset(ForgotPasswordResetReq req) {
+        String email = req.getEmail();
+        String code = req.getCode();
+
+        // 1. 两次密码一致性校验
+        if (!req.getNewPassword().equals(req.getConfirmPassword())) {
+            throw new BusinessException(AuthErrorCode.PASSWORD_CONFIRM_NOT_MATCH);
+        }
+
+        // 2. 校验密码重置验证码（空/格式/过期/错误四场景分别对应专属枚举）
+        verifyForgotPasswordCodeAndConsume(email, code);
+
+        // 3. 查找用户（验证码已验证通过，用户一定存在）
+        User user = userMapper.selectOne(
+                new LambdaQueryWrapper<User>().eq(User::getEmail, email)
+        );
+        if (user == null) {
+            throw new BusinessException(AuthErrorCode.EMAIL_NOT_FOUND);
+        }
+
+        // 4. 更新密码（BCrypt 加密）
+        user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
+        userMapper.updateById(user);
+
+        log.info("[密码重置成功] userId={}, email={}", user.getId(), email);
+    }
+
+    private void verifyForgotPasswordCodeAndConsume(String email, String code) {
+        if (!StringUtils.hasText(code)) {
+            throw new BusinessException(AuthErrorCode.FORGOT_PASSWORD_CODE_EMPTY);
+        }
+        if (!code.matches("^\\d{6}$")) {
+            throw new BusinessException(AuthErrorCode.FORGOT_PASSWORD_CODE_FORMAT_ERROR);
+        }
+        String key = RedisKeyConstants.buildForgotPasswordCodeKey(email);
+        Object stored = redisTemplate.opsForValue().get(key);
+        if (stored == null) {
+            throw new BusinessException(AuthErrorCode.FORGOT_PASSWORD_CODE_EXPIRED);
+        }
+        if (!code.equals(String.valueOf(stored))) {
+            throw new BusinessException(AuthErrorCode.FORGOT_PASSWORD_CODE_ERROR);
+        }
+        redisTemplate.delete(key);
     }
 }
