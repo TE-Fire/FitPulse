@@ -200,5 +200,44 @@ fitness-app-prototype/
 - web-admin（PC 端）忘记密码功能（本次未做，后续按需补充）
 - 接真实后端联调验证（当前走 mock）
 
+---
+
+## 八、项目架构文档同步（Android → Capacitor + Vue）
+
+> 会话主题：移动端技术栈从 Android 原生（Kotlin+Compose+Hilt）切换为 Capacitor + Vue 工作流，同步更新项目架构与功能说明文档
+> 起始时间：2026-08-18
+> 状态：完成
+
+### 8.1 背景
+- 用户明确弃用 Android 原生开发方案，改用 Capacitor + Vue 工作流
+- 项目记忆中已保留：Android 环境配置、Capacitor vs 原生对比并得到用户认可、fitness-app-prototype 高保真原型已落地（Vue3 + Vite + Tailwind）
+
+### 8.2 修改范围（docs/项目架构与功能说明.md，共 10 处）
+1. ✅ 1.1 节定位：Android 客户端 → 移动端 (Capacitor + Vue)，强调"一套代码双端复用"
+2. ✅ 单体架构设计理念：Android 与 Web → 移动端 与 Web
+3. ✅ 二节 Mermaid 架构图：`Android App\nKotlin+Compose+Hilt` → `Mobile App\nCapacitor+Vue3+Tailwind`
+4. ✅ 3.1 节重写：新增 Capacitor 原生能力桥接说明（preferences/camera/haptics/status-bar/splash-screen）、fitness-mobile 项目结构、与 Web Admin 同栈复用性说明
+5. ✅ 四节技术选型表：删除 11 项 Android 原生依赖（AGP/Kotlin/Compose/Hilt/Room/Vico 等），替换为 Vue3+Tailwind+Capacitor 6.x 全家桶 + Dexie.js 离线缓存
+6. ✅ 5.1 节注册登录流程：DataStore/Pinia → Pinia + Capacitor Preferences；Android 跳转 → 移动端跳转；用户打开Web/Android → Web/移动端
+7. ✅ 5.6 节 AI 对话流程：Web或Android → Web或移动端
+8. ✅ 六节 Phase 1-5 里程碑：Android骨架/Android DataStore/Vico/AI Bubble/Room 离线 → 移动端 Vue 原型骨架/Capacitor Preferences/ECharts/@capacitor/camera/Dexie.js；Phase 5 改名为"移动端交互联调"
+9. ✅ 7.4 节调试指南：Android Studio → Capacitor + Vue 三阶段（Web 开发期/原生壳联调/原生能力排查），含 `npx cap init/add/sync/open` 命令与 BASE_URL 说明
+10. ✅ 遗漏修正：3 处残留的 "Android" 字样（非 Capacitor 上下文）统一替换为"移动端"
+
+### 8.3 关键设计点
+- 保留 Capacitor 上下文内的 "Android" 字眼（生成 Android 工程、打包 APK、Android Studio 打开原生壳），避免完全抹除导致使用者误解原生壳平台
+- 技术选型表保留 ECharts，替代 Vico，与 Web Admin 组件复用形成正循环
+- 调试指南明确"阶段一浏览器开发覆盖 90% 联调"，对齐 Capacitor 的实际开发节奏
+
+### 8.4 后续
+- fitness-mobile 工程独立初始化（当前复用 fitness-app-prototype 原型骨架）
+- Capacitor Android 平台接入：`npx cap add android` 与 `capacitor.config.ts` 配置
+
+---
+
+## 九、全局规则追加（2026-08-18 用户明确）
+1. **devlogs 临时日志规则**：每次会话开始 → 新建/复用 `devlogs/in_progress.md` 记录开发过程；会话结束且用户确认完成后 → 重命名为 `yyyyMMdd_<会话概括>.md`（本规则原为项目级约束，本次再次全局化确认）
+2. **每次改动 git 提交规则**：每次完成文件改动（代码/文档/配置）后必须立即执行 git commit，保持提交粒度清晰（本规则追加为强制执行）
+
 
 
