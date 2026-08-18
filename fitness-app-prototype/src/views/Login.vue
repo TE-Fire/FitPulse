@@ -60,6 +60,10 @@
           <p v-if="errors.password" class="err">{{ errors.password }}</p>
         </div>
 
+        <div v-if="loginMode === 'password'" class="forgot-row">
+          <router-link to="/forgot-password" class="forgot-link">忘记密码?</router-link>
+        </div>
+
         <div v-else class="field code-field">
           <input
             v-model.trim="form.code"
@@ -520,5 +524,21 @@ async function onRegister() {
   cursor: pointer;
   margin-left: 4px;
   padding: 0;
+}
+
+.forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: -6px 2px 0 0;
+}
+.forgot-link {
+  font-size: 12px;
+  color: #7c5cff;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.forgot-link:hover {
+  color: #6d28d9;
 }
 </style>

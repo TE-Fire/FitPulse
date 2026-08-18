@@ -52,6 +52,74 @@ export function mockRegister({ email, password, code }) {
   return ok(null, '注册成功')
 }
 
+// =============== Auth: 忘记密码 mock ===============
+
+// 已注册邮箱白名单(原型简化:仅 fire_dev@qq.com 视为已注册,其他邮箱返回 404 模拟后端"邮箱未注册")
+const registeredEmails = new Set(['fire_dev@qq.com'])
+
+// 内存存储已发送的重置验证码 { email: { code, sentAt } },供 reset 校验
+const forgotCodeStore = new Map()
+
+/**
+ * 发送密码重置验证码(对齐接口文档 2.6)
+ * - 邮箱未注册返回 404(不防枚举攻击,用户找回自己账号)
+ * - 60s 内重复发送返回 409(防刷)
+ * - 成功回传明文验证码 + expireMinutes=5 + rateLimitSeconds=60
+ */
+export function mockForgotSendCode(email) {
+  if (!email || !email.endsWith('@qq.com')) {
+    return { code: 400, message: '必须为合法的 @qq.com 邮箱', data: null, timestamp: Date.now() }
+  }
+  if (!registeredEmails.has(email)) {
+    return { code: 404, message: '该邮箱未注册', data: null, timestamp: Date.now() }
+  }
+  const record = forgotCodeStore.get(email)
+  const now = Date.now()
+  if (record && now - record.sentAt < 60 * 1000) {
+    return { code: 409, message: '验证码发送过于频繁,请 60 秒后重试', data: null, timestamp: Date.now() }
+  }
+  const code = String(Math.floor(100000 + Math.random() * 900000))
+  forgotCodeStore.set(email, { code, sentAt: now })
+  return ok({ code, expireMinutes: 5, rateLimitSeconds: 60 })
+}
+
+/**
+ * 重置密码(对齐接口文档 2.7)
+ * - 两次密码不一致返回 400
+ * - 验证码空/格式错返回 400
+ * - 验证码过期/错误返回 401
+ * - 成功后立即从内存删除验证码(一次性消费,防重放),不自动登录
+ */
+export function mockForgotReset({ email, code, newPassword, confirmPassword }) {
+  if (!email || !email.endsWith('@qq.com')) {
+    return { code: 400, message: '必须为合法的 @qq.com 邮箱', data: null, timestamp: Date.now() }
+  }
+  if (!newPassword || newPassword.length < 8 || newPassword.length > 64 || !(/[A-Za-z]/.test(newPassword) && /\d/.test(newPassword))) {
+    return { code: 400, message: '密码需 8-64 位且同时包含字母和数字', data: null, timestamp: Date.now() }
+  }
+  if (newPassword !== confirmPassword) {
+    return { code: 400, message: '两次输入的密码不一致', data: null, timestamp: Date.now() }
+  }
+  if (!code || !/^\d{6}$/.test(code)) {
+    return { code: 400, message: '验证码为 6 位数字', data: null, timestamp: Date.now() }
+  }
+  const record = forgotCodeStore.get(email)
+  if (!record) {
+    return { code: 401, message: '验证码不存在或已过期,请重新发送', data: null, timestamp: Date.now() }
+  }
+  const now = Date.now()
+  if (now - record.sentAt > 5 * 60 * 1000) {
+    forgotCodeStore.delete(email)
+    return { code: 401, message: '验证码已过期,请重新发送', data: null, timestamp: Date.now() }
+  }
+  if (record.code !== code) {
+    return { code: 401, message: '验证码错误', data: null, timestamp: Date.now() }
+  }
+  // 校验通过,一次性消费验证码(防重放)
+  forgotCodeStore.delete(email)
+  return ok(null, '密码重置成功')
+}
+
 // =============== Dashboard 模块 mock ===============
 
 // 训练看板(对齐接口文档 3.1 响应示例)

@@ -88,6 +88,36 @@
 
 ---
 
+## 七、忘记密码前端实现（同步后端新增接口，fitness-web-admin）
+
+### 背景
+后端新增忘记密码双接口并已同步至 [接口文档.md](file:///d:/FitPulse/docs/接口文档.md) 2.6/2.7：
+- `POST /auth/forgot-password/send-code` body `{email}` → `SendCodeResp{code,expireMinutes,rateLimitSeconds}`，邮箱未注册→404，60s 防刷→409，明文回传验证码
+- `POST /auth/forgot-password/reset` body `{email,code,newPassword,confirmPassword}` → `data=null`，两次不一致→400，验证码校验，**不自动登录**跳登录页
+- DTO 字段已核对：`ForgotPasswordSendCodeReq{email}` / `ForgotPasswordResetReq{email,code,newPassword,confirmPassword}`（与文档一致）
+
+### UI 设计决策（已与用户确认）
+| 维度 | 选择 |
+|---|---|
+| 入口位置 | 登录密码模式密码框下方右对齐 "忘记密码？" 链接 |
+| 流程结构 | 独立路由 /forgot-password + 单卡单页表单（邮箱+发码/验证码/新密码/确认一次铺开） |
+| 重置成功后 | ElMessage + router.replace('/login?email=xxx) 预填邮箱 |
+| 视觉风格 | 复用既有"极简清新健康"（同 Logo/卡片/品牌色/输入框样式） |
+
+### 执行完成（7/7）
+1. ✅ [api/auth.js](file:///d:/FitPulse/fitness-web-admin/src/api/auth.js) 新增 `forgotPasswordSendCode(email)` + `forgotPasswordReset(data)`
+2. ✅ [router/index.js](file:///d:/FitPulse/fitness-web-admin/src/router/index.js) 新增 `/forgot-password` 路由（免鉴权）
+3. ✅ [AuthPage.vue](file:///d:/FitPulse/fitness-web-admin/src/views/auth/AuthPage.vue) 密码框下方右对齐 "忘记密码？" 链接 + `query.email` 预填（onMounted + watch）
+4. ✅ 新建 [ForgotPassword.vue](file:///d:/FitPulse/fitness-web-admin/src/views/auth/ForgotPassword.vue)：单卡单页表单（邮箱+发码/倒计时/dev 明文、验证码、新密码+眼睛、确认密码+眼睛、重置按钮、返回登录）
+5. ✅ 重置成功 → `router.replace({name:'Login', query:{email}})`
+6. ✅ 浏览器验证 PASS：忘记密码页渲染齐全、入口链接右对齐、双向跳转、email query 预填均正常
+7. ✅ 本日志追写 + git 提交
+
+### 待用户验证
+- 启动后端 8080 后联调：忘记密码发码（404 未注册场景）→ 重置 → 跳登录页预填邮箱 → 用新密码登录
+
+---
+
 ## 五、移动端高保真原型开发（fitness-app-prototype）
 
 > 会话主题：基于设计契约实现 FitPulse 移动端高保真交互原型（Vue 3 + Vite + Tailwind）
@@ -133,5 +163,42 @@ fitness-app-prototype/
 - 后端 dashboard/training/health/ai/user 接口实现后，将 mock 切换为真实 API
 - Capacitor 接入打包 APK
 - 各页面交互细节打磨（根据用户预览反馈）
+
+---
+
+## 六、忘记密码功能同步（app-prototype）
+
+> 会话主题：后端新增忘记密码接口，前端 app-prototype 同步实现（独立路由页方案）
+> 起始时间：2026-08-18
+> 状态：完成，已通过构建验证
+
+### 6.1 后端新接口（已在后端 + 接口文档同步）
+- `POST /api/v1/auth/forgot-password/send-code` body:`{email}` → data:`{code,expireMinutes,rateLimitSeconds}`（明文验证码）
+  - 邮箱未注册 404（不防枚举）、60s 防刷 409、Redis key 前缀 `fitpulse:forgot-password:code:` 与注册/登录隔离
+- `POST /api/v1/auth/forgot-password/reset` body:`{email,code,newPassword,confirmPassword}` → data:null
+  - 两次密码不一致 400、验证码空/格式错 400、过期/错误 401；校验通过后一次性消费验证码（防重放）；不自动登录，前端跳登录页
+
+### 6.2 前端实现决策（已与用户确认）
+- 范围：仅 app-prototype（移动原型端），web-admin 暂不动
+- UI 形式：独立路由页 `/forgot-password`（与 `/login` 同级，BottomNav 外），Login 登录密码模式底部加"忘记密码?"链接跳转
+
+### 6.3 任务清单与完成情况
+1. ✅ 扩展 [mock/index.js](file:///d:/FitPulse/fitness-app-prototype/src/mock/index.js)：新增 `mockForgotSendCode`（404/409/明文码，60s 防刷内存时间戳）、`mockForgotReset`（400/401/一次性消费验证码，防重放），严格对齐后端语义
+2. ✅ 扩展 [api/auth.js](file:///d:/FitPulse/fitness-app-prototype/src/api/auth.js)：新增 `forgotPasswordSendCode(email)` / `forgotPasswordReset(data)`，走 `mockCall`
+3. ✅ 新增路由 `/forgot-password` → [ForgotPassword.vue](file:///d:/FitPulse/fitness-app-prototype/src/views/ForgotPassword.vue)（[router/index.js](file:///d:/FitPulse/fitness-app-prototype/src/router/index.js)）
+4. ✅ 新增 [ForgotPassword.vue](file:///d:/FitPulse/fitness-app-prototype/src/views/ForgotPassword.vue)：复用 Login 视觉风格；单页表单（邮箱 + 获取验证码60s倒计时 + 6位验证码 + 新密码8-64字母+数字 + 确认密码 + 重置按钮）；完整前端校验；开发明文验证码提示；新密码/确认密码可见切换；重置成功提示后跳 `/login`（不自动登录）
+5. ✅ [Login.vue](file:///d:/FitPulse/fitness-app-prototype/src/views/Login.vue) 登录 Tab 密码模式底部加"忘记密码?" `router-link` + 样式
+6. ✅ 静态自审 + `npm run build` 构建验证：607 模块编译通过，新增 `ForgotPassword` chunk（css 3.21kB / js 4.56kB），仅 ECharts chunk 大小警告（非错误）
+
+### 6.4 关键设计点
+- mock 用 `registeredEmails` 白名单（`fire_dev@qq.com`）模拟"已注册"，其他 QQ 邮箱返回 404，对齐后端"邮箱未注册"语义
+- mock 用 `forgotCodeStore` Map 记录已发送验证码（code + sentAt），reset 时校验一致后立即 delete（一次性消费）
+- 重置成功后 `setTimeout 1s` 跳转 `/login`，对齐后端"不自动登录、不返回 Token"
+- 视觉与 Login.vue 1:1 对齐（品牌渐变 logo + 白卡 + 品牌色聚焦环 + 渐变主按钮），新增 success-tip（绿色成功提示）
+
+### 6.5 待后续完善
+- web-admin（PC 端）忘记密码功能（本次未做，后续按需补充）
+- 接真实后端联调验证（当前走 mock）
+
 
 
