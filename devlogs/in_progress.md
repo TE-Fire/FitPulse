@@ -238,6 +238,88 @@ fitness-app-prototype/
 ## 九、全局规则追加（2026-08-18 用户明确）
 1. **devlogs 临时日志规则**：每次会话开始 → 新建/复用 `devlogs/in_progress.md` 记录开发过程；会话结束且用户确认完成后 → 重命名为 `yyyyMMdd_<会话概括>.md`（本规则原为项目级约束，本次再次全局化确认）
 2. **每次改动 git 提交规则**：每次完成文件改动（代码/文档/配置）后必须立即执行 git commit，保持提交粒度清晰（本规则追加为强制执行）
+3. **任务讨论确认规则**：每次制定任务前必须先与用户讨论方案，用户明确确认后方可开始执行（避免方案偏差返工）
+
+---
+
+## 十、Controller 请求日志切面（@RequestLog 注解 + AOP）
+
+> 会话主题：基于自定义注解 + Spring AOP 切面实现 Controller 请求日志打印（日期/方法/请求方式/参数等）
+> 起始时间：2026-08-18
+> 状态：完成，编译通过
+
+### 10.1 需求与方案讨论（已与用户确认）
+- **技术栈**：Spring AOP + 自定义注解，不使用 Servlet Filter / Interceptor（注解更精细，仅拦截必要方法）
+- **依赖**：新增 `spring-boot-starter-aop`（同时引入 spring-aop 与 aspectjweaver）
+- **生效方式**：方法级显式开关，仅标注 `@RequestLog` 的方法才记录日志，未标注方法无任何切面开销
+- **日志输出位置**：仅控制台（用户明确，不入独立文件）
+- **GET 请求参数**：额外解析 QueryString（用户明确要求），配合 @RequestParam/@PathVariable 一起采集
+- **脱敏工具类位置**：`common/util/LogMaskUtil.java`（用户明确要求放在 util 下，而非 aspect 内部）
+- **演示范围**：仅在 AuthController 的 3 个典型接口标注（login / logout / forgotPasswordSendCode）
+
+### 10.2 文件清单
+| 文件 | 类型 | 说明 |
+|---|---|---|
+| `fitness-backend/pom.xml` | 修改 | 新增 spring-boot-starter-aop 依赖 |
+| `common/annotation/RequestLog.java` | 新建 | 注解定义，方法级，含 value/logArgs/logResult/logCost/maskFields 5 个属性 |
+| `common/util/LogMaskUtil.java` | 新建 | 脱敏工具类，默认脱敏 password/token/code 等 10 个字段，支持自定义扩展 |
+| `common/aspect/RequestLogAspect.java` | 新建 | 切面实现，@Around 环绕通知 |
+| `auth/controller/AuthController.java` | 修改 | 3 个接口添加 @RequestLog 注解 |
+
+### 10.3 注解设计
+```java
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface RequestLog {
+    String value() default "";          // 接口描述
+    boolean logArgs() default true;      // 是否打印入参
+    boolean logResult() default true;   // 是否打印返回值
+    boolean logCost() default true;      // 是否打印耗时
+    String[] maskFields() default {};   // 额外脱敏字段
+}
+```
+
+### 10.4 日志格式
+```
+========== [RequestLog] 用户登录 ==========
+Trace-ID  : 9f3a2b1c8d
+Timestamp : 2026-08-18 22:30:15.456
+URI       : /api/v1/auth/login
+Method    : POST
+Controller: AuthController#login
+IP        : 192.168.1.10
+UA        : Mozilla/5.0 (Windows NT 10.0)
+Params    : {"username":"fire_dev","password":"******","type":1}
+---------- 执行中 ----------
+Result    : {"code":200,"message":"操作成功","data":{...}}
+Cost      : 56ms
+Status    : SUCCESS
+========== 请求结束 ==========
+```
+异常路径打印 `Status: FAILED` + `Exception` + `Message`，原异常透传不影响 GlobalExceptionHandler。
+
+### 10.5 关键设计点
+1. **Trace-ID**：UUID 前 12 位，便于串联同一请求的多条日志
+2. **参数采集**：
+   - POST/PUT/DELETE：解析 @RequestBody 整体 + @RequestParam + @PathVariable
+   - GET：在上述基础上额外解析 `request.getQueryString()`，URL 解码后合并到参数 Map（@RequestParam 已解析的优先保留）
+3. **脱敏**：
+   - 默认字段：password、passwordHash、oldPassword、newPassword、confirmPassword、secret、token、accessToken、refreshToken、code、captcha
+   - 规则：字符串值 → `******`；非字符串值（数字、布尔）保留原值避免类型歧义
+   - 嵌套对象递归处理
+   - 脱敏过程异常不抛出，原样返回（保证日志打印不被脱敏逻辑阻塞）
+4. **IP 解析**：依次尝试 X-Forwarded-For → X-Real-IP → Proxy-Client-IP → WL-Proxy-Client-IP → remoteAddr，多级代理取第一个
+5. **不可序列化参数跳过**：HttpServletRequest/Response、HttpSession、MultipartFile 不参与 JSON 序列化
+6. **异常透传**：`@Around` 捕获异常 → 记录 FAILED 日志 → 重新 throw，不干扰 `GlobalExceptionHandler` 的统一异常处理
+
+### 10.6 编译验证
+- 首次编译失败：`Method.getDeclingClass()` 拼写错误（应为 `getDeclaringClass()`）
+- 修正后 `mvn compile` 通过，无 warning（同步清理未使用的 import：`JSONUtil`、`ArrayList`、`List`）
+
+### 10.7 后续
+- 待用户启动后端联调验证：调用 `/auth/login` 观察控制台日志格式与脱敏效果
+- 其他 Controller（Dashboard/Training/Health/User/Ai）后续按需添加 @RequestLog 注解
+- 可选优化：未来若需独立 request.log 文件，可在 logback-spring.xml 中添加独立 appender + logger
 
 
 

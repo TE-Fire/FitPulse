@@ -11,6 +11,7 @@ import com.fitpulse.app.auth.dto.vo.LoginUserVO;
 import com.fitpulse.app.auth.dto.vo.SendCodeResp;
 import com.fitpulse.app.auth.jwt.CurrentUser;
 import com.fitpulse.app.auth.service.AuthService;
+import com.fitpulse.app.common.annotation.RequestLog;
 import com.fitpulse.app.common.result.Result;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -56,6 +57,7 @@ public class AuthController {
      * <p>type=1 密码登录 / type=2 验证码登录。
      */
     @PostMapping("/login")
+    @RequestLog("用户登录")
     public Result<LoginUserVO> login(@Valid @RequestBody LoginReq req) {
         return Result.success(authService.login(req));
     }
@@ -85,6 +87,7 @@ public class AuthController {
      * <p>未登录时 JwtAuthFilter 未写入 Context，anyRequest().authenticated() 会在 Security 层直接返回 401。
      */
     @PostMapping("/logout")
+    @RequestLog("用户登出")
     public Result<Void> logout() {
         Long userId = CurrentUser.getUserId();
         authService.logout(userId);
@@ -97,6 +100,7 @@ public class AuthController {
      * <p>返回体 data.code 与控制台 log.info 输出、邮件正文、Redis 存储值完全一致，便于本地/演示联调。
      */
     @PostMapping("/forgot-password/send-code")
+    @RequestLog("发送密码重置验证码")
     public Result<SendCodeResp> forgotPasswordSendCode(@Valid @RequestBody ForgotPasswordSendCodeReq req) {
         return Result.success(authService.forgotPasswordSendCode(req));
     }
