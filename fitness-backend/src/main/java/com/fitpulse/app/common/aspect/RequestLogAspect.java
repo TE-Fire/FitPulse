@@ -20,39 +20,35 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 /**
- * Controller 请求日志切面。
- * <p>仅对标注了 {@link RequestLog} 注解的 Controller 方法生效，记录：
+ * Controller 请求日志切面（单行高性能版）。
+ * <p>仅对标注了 {@link RequestLog} 注解的 Controller 方法生效，记录单行日志：
+ * <pre>
+ * [2026-08-18 POST] AuthController#login params={...} response={...}
+ * </pre>
+ *
+ * <h3>性能优化</h3>
  * <ul>
- *   <li>Trace-ID：单次请求唯一标识（UUID 前 12 位），便于串联同请求多条日志</li>
- *   <li>时间戳、URI、HTTP 方法、Controller#方法名</li>
- *   <li>客户端 IP、User-Agent</li>
- *   <li>请求参数：@RequestBody + @RequestParam + @PathVariable + QueryString</li>
- *   <li>返回值（自动脱敏敏感字段）</li>
- *   <li>执行耗时、状态（SUCCESS / FAILED）</li>
+ *   <li>单次 log.info / log.warn 调用（一次 IO）</li>
+ *   <li>StringBuilder 一次性拼接，避免多次字符串中间量</li>
+ *   <li>日期格式仅到天（yyyy-MM-dd），使用静态 DateTimeFormatter 避免重复编译模式</li>
+ *   <li>无 Trace-ID 生成（去除 UUID 调用）</li>
+ *   <li>异常路径用 warn 级别单独输出，避免与正常流混淆</li>
  * </ul>
  *
- * <h3>日志格式</h3>
- * <pre>
- * ========== [RequestLog] 用户登录 ==========
- * Trace-ID  : 9f3a2b1c8d
- * Timestamp : 2026-08-18 22:30:15.456
- * URI       : /api/v1/auth/login
- * Method    : POST
- * Controller: AuthController#login
- * IP        : 192.168.1.10
- * UA        : Mozilla/5.0 (Windows NT 10.0)
- * Params    : {"username":"fire_dev","password":"******","type":1}
- * ---------- 执行中 ----------
- * Result    : {"code":200,"message":"操作成功","data":{...}}
- * Cost      : 56ms
- * Status    : SUCCESS
- * ========== 请求结束 ==========
- * </pre>
+ * <h3>采集字段</h3>
+ * <ul>
+ *   <li>日期（yyyy-MM-dd）</li>
+ *   <li>请求类型（HTTP Method：GET/POST/PUT/DELETE 等）</li>
+ *   <li>请求方法（Controller#method）</li>
+ *   <li>参数信息（@RequestBody + @RequestParam + @PathVariable + GET QueryString，含脱敏）</li>
+ *   <li>响应信息（方法返回值，含脱敏）</li>
+ * </ul>
  *
  * @author FitPulse
  */
@@ -62,23 +58,19 @@ public class RequestLogAspect {
 
     private static final Logger log = LoggerFactory.getLogger(RequestLogAspect.class);
 
+    /** 日期格式化器（静态常量，避免重复编译模式）。 */
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
     /**
      * 环绕通知：拦截所有标注 @RequestLog 的方法。
      */
     @Around("@annotation(requestLog)")
     public Object around(ProceedingJoinPoint joinPoint, RequestLog requestLog) throws Throwable {
-        // 生成单次请求 Trace-ID，便于串联同请求后续日志
-        String traceId = generateTraceId();
-        long startTime = System.currentTimeMillis();
-
-        // 解析请求上下文（可能在异步线程或非 HTTP 环境下为 null）
+        // 解析请求上下文（异步线程或非 HTTP 环境下可能为 null）
         HttpServletRequest request = currentRequest();
 
-        // 打印请求前日志
-        printRequestHeader(traceId, requestLog, joinPoint, request);
-        if (requestLog.logArgs()) {
-            printRequestArgs(traceId, requestLog, joinPoint, request);
-        }
+        // 预先构建请求部分日志（日期、HTTP 方法、Controller#方法、参数）
+        String requestPart = buildRequestPart(joinPoint, requestLog, request);
 
         // 执行目标方法
         Object result = null;
@@ -90,61 +82,52 @@ public class RequestLogAspect {
             error = ex;
             throw ex;
         } finally {
-            long cost = System.currentTimeMillis() - startTime;
-            printResponseFooter(traceId, requestLog, result, error, cost);
+            // 单次日志调用输出完整一行
+            emitLog(requestLog, requestPart, result, error);
         }
     }
 
     // ============================================================
-    // ============  请求头日志（开始部分）  ========================
-    // ============================================================
-
-    private void printRequestHeader(String traceId, RequestLog ann, ProceedingJoinPoint joinPoint, HttpServletRequest request) {
-        String desc = StrUtil.isBlank(ann.value()) ? "未命名接口" : ann.value();
-        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Method method = signature.getMethod();
-        String controllerName = method.getDeclaringClass().getSimpleName();
-        String methodName = method.getName();
-        String fullMethod = controllerName + "#" + methodName;
-
-        String httpMethod = "UNKNOWN";
-        String uri = "-";
-        String ip = "-";
-        String ua = "-";
-
-        if (request != null) {
-            httpMethod = request.getMethod();
-            uri = request.getRequestURI();
-            ip = resolveClientIp(request);
-            ua = request.getHeader("User-Agent");
-            if (StrUtil.isBlank(ua)) {
-                ua = "-";
-            }
-        }
-
-        log.info("========== [RequestLog] {} ==========", desc);
-        log.info("Trace-ID  : {}", traceId);
-        log.info("Timestamp : {}", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")));
-        log.info("URI       : {}", uri);
-        log.info("Method    : {}", httpMethod);
-        log.info("Controller: {}", fullMethod);
-        log.info("IP        : {}", ip);
-        log.info("UA        : {}", ua);
-    }
-
-    // ============================================================
-    // ============  请求参数日志  =================================
+    // ============  请求部分构建  ==================================
     // ============================================================
 
     /**
-     * 打印请求参数：
-     * <ol>
-     *   <li>POST/PUT/DELETE：从方法入参解析 @RequestBody 对象</li>
-     *   <li>GET：额外解析 QueryString + @RequestParam</li>
-     *   <li>所有方法：解析 @PathVariable</li>
-     * </ol>
+     * 构建请求部分日志：[yyyy-MM-dd METHOD] [desc] Controller#method params={...}
      */
-    private void printRequestArgs(String traceId, RequestLog ann, ProceedingJoinPoint joinPoint, HttpServletRequest request) {
+    private String buildRequestPart(ProceedingJoinPoint joinPoint, RequestLog ann, HttpServletRequest request) {
+        StringBuilder sb = new StringBuilder(128);
+
+        // 日期 + HTTP 方法
+        String date = LocalDate.now().format(DATE_FORMATTER);
+        String httpMethod = request != null ? request.getMethod() : "UNKNOWN";
+        sb.append('[').append(date).append(' ').append(httpMethod).append("] ");
+
+        // 业务描述（可选）
+        if (StrUtil.isNotBlank(ann.value())) {
+            sb.append(ann.value()).append(' ');
+        }
+
+        // Controller#方法
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        Method method = signature.getMethod();
+        sb.append(method.getDeclaringClass().getSimpleName())
+          .append('#')
+          .append(method.getName());
+
+        // 参数
+        if (ann.logArgs()) {
+            String paramsJson = buildParamsJson(joinPoint, request, ann);
+            sb.append(" params=").append(paramsJson);
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * 构建参数 JSON（含脱敏）。
+     * <p>采集 @RequestBody + @RequestParam + @PathVariable，GET 请求额外合并 QueryString。
+     */
+    private String buildParamsJson(ProceedingJoinPoint joinPoint, RequestLog ann, HttpServletRequest request) {
         Map<String, Object> paramsMap = new HashMap<>();
 
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
@@ -152,85 +135,75 @@ public class RequestLogAspect {
         Parameter[] parameters = method.getParameters();
         Object[] args = joinPoint.getArgs();
 
-        // 1. 解析方法参数：@RequestBody / @RequestParam / @PathVariable
+        // 1. 解析方法参数
         for (int i = 0; i < parameters.length; i++) {
             Parameter param = parameters[i];
             Object arg = args[i];
 
-            // 跳过不可序列化的内置对象
             if (isIgnorableArg(arg)) {
                 continue;
             }
 
             String paramName = param.isNamePresent() ? param.getName() : "arg" + i;
 
-            // 区分参数类型
             if (isRequestBodyParam(param)) {
-                // @RequestBody：整体作为 body 对象
                 paramsMap.put("body", arg);
-            } else if (isRequestParamParam(param) || isPathVariableParam(param)) {
-                // @RequestParam / @PathVariable：按名加入
-                paramsMap.put(paramName, arg);
             } else {
-                // 未标注注解的简单参数，也按名加入
+                // @RequestParam / @PathVariable / 未标注的简单参数
                 paramsMap.put(paramName, arg);
             }
         }
 
-        // 2. GET 请求额外解析 QueryString（处理 @RequestParam 简写形式：String username）
+        // 2. GET 请求额外解析 QueryString
         if (request != null && "GET".equalsIgnoreCase(request.getMethod())) {
             String queryString = request.getQueryString();
             if (StrUtil.isNotBlank(queryString)) {
                 Map<String, String> queryMap = parseQueryString(queryString);
                 for (Map.Entry<String, String> entry : queryMap.entrySet()) {
-                    // 方法参数已解析的优先保留，不覆盖
                     paramsMap.putIfAbsent(entry.getKey(), entry.getValue());
                 }
             }
         }
 
         // 3. 脱敏 + 序列化
-        String paramsJson;
         if (paramsMap.isEmpty()) {
-            paramsJson = "{}";
-        } else {
-            paramsJson = LogMaskUtil.mask(paramsMap, ann.maskFields());
+            return "{}";
         }
-
-        log.info("Params    : {}", paramsJson);
-        log.info("---------- 执行中 ----------");
+        return LogMaskUtil.mask(paramsMap, ann.maskFields());
     }
 
     // ============================================================
-    // ============  响应尾日志  ===================================
+    // ============  日志输出  =====================================
     // ============================================================
 
-    private void printResponseFooter(String traceId, RequestLog ann, Object result, Throwable error, long cost) {
+    /**
+     * 单次日志调用输出完整一行。
+     * <p>成功路径用 info 级别，异常路径用 warn 级别。
+     */
+    private void emitLog(RequestLog ann, String requestPart, Object result, Throwable error) {
         try {
+            StringBuilder sb = new StringBuilder(requestPart.length() + 64);
+            sb.append(requestPart);
+
             if (error != null) {
                 // 异常路径
                 String exType = error.getClass().getSimpleName();
                 String exMsg = StrUtil.isBlank(error.getMessage()) ? "(无消息)" : error.getMessage();
-                log.info("Status    : FAILED");
-                log.info("Exception : {}", exType);
-                log.info("Message   : {}", exMsg);
+                sb.append(" exception=").append(exType).append(':').append(exMsg);
+                log.warn(sb.toString());
             } else {
                 // 成功路径
-                log.info("Status    : SUCCESS");
                 if (ann.logResult() && result != null) {
                     String resultJson = LogMaskUtil.mask(result, ann.maskFields());
-                    log.info("Result    : {}", resultJson);
+                    sb.append(" response=").append(resultJson);
                 } else {
-                    log.info("Result    : (未记录)");
+                    sb.append(" response=(未记录)");
                 }
+                log.info(sb.toString());
             }
-            if (ann.logCost()) {
-                log.info("Cost      : {}ms", cost);
-            }
-            log.info("========== 请求结束 ==========");
         } catch (Exception e) {
-            // 尾部日志打印失败不影响主流程
-            log.warn("[RequestLog] 尾部日志打印失败 traceId={} err={}", traceId, e.getMessage());
+            // 日志打印失败不影响主流程
+            log.warn("[RequestLog] 日志输出失败 err={}", e.getMessage());
         }
     }
 
@@ -240,7 +213,6 @@ public class RequestLogAspect {
 
     /**
      * 获取当前 HTTP 请求对象。
-     * <p>非 HTTP 上下文（如异步线程、定时任务）下返回 null。
      */
     private HttpServletRequest currentRequest() {
         ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
@@ -248,41 +220,7 @@ public class RequestLogAspect {
     }
 
     /**
-     * 生成 12 位 Trace-ID。
-     */
-    private String generateTraceId() {
-        return UUID.randomUUID().toString().replace("-", "").substring(0, 12);
-    }
-
-    /**
-     * 解析客户端真实 IP。
-     * <p>依次尝试：X-Forwarded-For → X-Real-IP → Proxy-Client-IP → WL-Proxy-Client-IP → remoteAddr。
-     * <p>X-Forwarded-For 多级代理时取第一个非 unknown 的值。
-     */
-    private String resolveClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (StrUtil.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (StrUtil.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("Proxy-Client-IP");
-        }
-        if (StrUtil.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("WL-Proxy-Client-IP");
-        }
-        if (StrUtil.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        // 多级代理场景：取第一个
-        if (StrUtil.isNotBlank(ip) && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        return ip;
-    }
-
-    /**
      * 解析 QueryString 为 Map（URL 解码）。
-     * <p>对于重复 key 取最后一个；不做 URL 解码失败的容错（出错时原样保留）。
      */
     private Map<String, String> parseQueryString(String queryString) {
         Map<String, String> result = new HashMap<>();
@@ -323,22 +261,7 @@ public class RequestLogAspect {
     }
 
     /**
-     * 判断参数是否标注了 @RequestParam。
-     */
-    private boolean isRequestParamParam(Parameter param) {
-        return param.getAnnotation(org.springframework.web.bind.annotation.RequestParam.class) != null;
-    }
-
-    /**
-     * 判断参数是否标注了 @PathVariable。
-     */
-    private boolean isPathVariableParam(Parameter param) {
-        return param.getAnnotation(org.springframework.web.bind.annotation.PathVariable.class) != null;
-    }
-
-    /**
      * 判断参数值是否应跳过日志记录。
-     * <p>跳过：HttpServletRequest/Response、HttpSession、MultipartFile 等不可 JSON 序列化的内置对象。
      */
     private boolean isIgnorableArg(Object arg) {
         if (arg == null) {

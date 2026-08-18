@@ -321,5 +321,65 @@ Status    : SUCCESS
 - 其他 Controller（Dashboard/Training/Health/User/Ai）后续按需添加 @RequestLog 注解
 - 可选优化：未来若需独立 request.log 文件，可在 logback-spring.xml 中添加独立 appender + logger
 
+---
+
+## 十一、RequestLog 切面性能优化（单行日志版）
+
+> 会话主题：用户反馈启用 @RequestLog 后响应速度变慢，精简日志输出为单行格式
+> 起始时间：2026-08-18
+> 状态：完成，编译通过
+
+### 11.1 性能瓶颈分析
+原版切面存在多处性能开销：
+1. **多次 log.info 调用**：单次请求产生 10+ 条日志，每条都是一次独立 IO（最大瓶颈）
+2. **UUID 生成**：每次请求生成 Trace-ID
+3. **字符串中间量**：多次 `+` 拼接产生临时字符串
+4. **DateTimeFormatter 重复编译**：每次请求 `ofPattern()` 编译模式
+5. **无效信息采集**：IP 解析、UA 获取等网络相关操作
+
+### 11.2 精简方案（已与用户确认）
+**保留**（用户明确要求）：
+- 日期 `yyyy-MM-dd`（去掉时分秒，进一步减少格式化成本）
+- 请求类型（HTTP Method: GET/POST/...）
+- 请求方法（Controller#method）
+- 参数信息（含脱敏）
+- 响应信息（含脱敏）
+
+**删除**：Trace-ID、Timestamp 时分秒、URI、IP、UA、Cost、Status、分隔线
+
+### 11.3 新日志格式
+```
+[2026-08-18 POST] 用户登录 AuthController#login params={"body":{"username":"fire_dev","password":"******","type":1}} response={"code":200,"message":"操作成功","data":{"accessToken":"******"}}
+```
+
+异常时单行 warn：
+```
+[2026-08-18 POST] 发送密码重置验证码 AuthController#forgotPasswordSendCode params={...} exception=BusinessException:邮箱未注册
+```
+
+### 11.4 性能优化点
+1. **单次 log.info / log.warn 调用**：从 10+ 次 IO 降到 1 次
+2. **StringBuilder 一次性拼接**：预分配容量 128+64，避免扩容
+3. **静态 DateTimeFormatter 常量**：模式编译只发生一次
+4. **删除 UUID 生成**：去除 `UUID.randomUUID().toString()` 调用
+5. **删除 IP/UA 解析**：避免多次 `request.getHeader()` 调用
+6. **保留脱敏**：脱敏逻辑本身性能良好（Hutool JSON），且对安全至关重要不删除
+
+### 11.5 注解精简
+删除 `logCost()` 属性（耗时信息已删除，属性无意义）。保留 `value` / `logArgs` / `logResult` / `maskFields` 四个属性。
+
+### 11.6 文件清单
+| 文件 | 类型 | 说明 |
+|---|---|---|
+| `common/annotation/RequestLog.java` | 修改 | 删除 logCost 属性，更新文档注释 |
+| `common/aspect/RequestLogAspect.java` | 重写 | 单行日志输出，性能优化 |
+
+### 11.7 编译验证
+`mvn compile` 通过，无 warning。
+
+### 11.8 后续
+- 待用户重新测试响应速度
+- 若仍需进一步优化，可考虑：异步日志输出（logback AsyncAppender）、关闭脱敏递归等
+
 
 
