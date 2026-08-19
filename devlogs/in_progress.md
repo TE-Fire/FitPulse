@@ -226,6 +226,56 @@ ALTER TABLE user_profile
 
 **git 提交**：P1 + 文档同步合并提交。
 
+### P2 - DTO 与 Mapper 层（2026-08-19 完成）
+
+**P2.1 UserProfileVO**：`user/dto/vo/UserProfileVO.java`，响应 DTO，聚合 user + user_profile 联查。内嵌 Profile 静态类，包含 V2 新增字段（weightKg / bodyFatPct / fitnessLevel / theme）。使用 @Builder 注解与 LoginUserVO 风格一致。
+
+**P2.2 UpdateProfileReq**：`user/dto/req/UpdateProfileReq.java`，更新基本资料请求。所有字段可空（部分更新语义），使用 @DecimalMin/@DecimalMax 校验数值范围（身高 50-300cm，体重 20-500kg，体脂 3-60%）。
+
+**P2.3 UpdateAccountReq**：`user/dto/req/UpdateAccountReq.java`，更新账号信息请求。邮箱 @Pattern 限定 @qq.com，手机号 @Pattern 限定 11 位数字。
+
+**P2.4 ChangePasswordReq**：`user/dto/req/ChangePasswordReq.java`，修改密码请求。newPassword 使用与 RegisterReq 相同的 @Size + @Pattern 校验规则（8-64 位，至少含字母+数字）。
+
+**P2.5 UserProfileMapper**：`mapper/UserProfileMapper.java`，放在 common/mapper 包下与 UserMapper 保持一致（实体共享，Mapper 共享）。
+
+**P2.6 UserMapper 确认**：已存在于 `mapper/UserMapper.java`，直接复用。
+
+### P3 - Service 与 Controller 层（2026-08-19 完成）
+
+**P3.1 UserErrorCode**：`user/enums/UserErrorCode.java`，8 个枚举值：
+- 404: USER_NOT_FOUND / USER_PROFILE_NOT_FOUND
+- 401: OLD_PASSWORD_ERROR
+- 409: EMAIL_ALREADY_USED / PHONE_ALREADY_USED
+- 400: PASSWORD_CONFIRM_NOT_MATCH / NO_FIELDS_TO_UPDATE
+
+**P3.2 UserService 接口**：`user/service/UserService.java`，4 个方法：getProfile / updateProfile / updateAccount / changePassword。
+
+**P3.3 UserServiceImpl**：`user/service/impl/UserServiceImpl.java`，完整实现：
+- getProfile: user + user_profile 联查，profile 不存在返回空对象
+- updateProfile: profile 不存在则 INSERT，存在则 UPDATE，仅更新非 null 字段
+- updateAccount: 邮箱/手机号变更时检查唯一性（排除当前 userId）
+- changePassword: 旧密码 BCrypt 比对，通过后加密新密码更新
+
+**P3.4 UserController**：`user/controller/UserController.java`，4 个端点：
+- GET /api/v1/user/profile
+- PUT /api/v1/user/profile
+- PUT /api/v1/user/account
+- PUT /api/v1/user/password
+
+均标注 @RequestLog 注解，使用 CurrentUser.getUserId() 获取当前用户。
+
+**编译验证**：`mvn compile` 通过，exit code 0。
+
+**代码风格对齐 auth 模块**：
+- @Slf4j + @Service + @RequiredArgsConstructor 三件套
+- 私有常量 private static final
+- 关键节点 log.info 记录（带 userId 上下文）
+- 异常用 UserErrorCode 模块专属枚举
+- DTO 使用 @Builder + @NoArgsConstructor + @AllArgsConstructor
+- Controller 使用 @Valid + @RequestBody + Result<T>
+
+**git 提交**：P2 + P3 合并提交。
+
 ---
 
 ## 七、管理端用户界面开发（2026-08-19）
