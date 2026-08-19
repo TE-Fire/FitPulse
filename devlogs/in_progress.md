@@ -404,5 +404,150 @@ ALTER TABLE user_profile
 
 本轮 d7.1-d7.5 完成后统一提交。
 
+---
+
+## 九、体脂率前端估算决策（2026-08-19）
+
+### 9.1 背景
+
+用户填写个人资料时，身高和体重容易获取，但大部分用户不知道自己的体脂率。为提升填写体验，需要在用户填入身高/体重/性别/生日后，前端以浅色显示根据这些数据计算后的体脂率建议值。
+
+### 9.2 决策结论：不需要后端参与
+
+| 维度 | 理由 |
+|---|---|
+| 数据来源 | 身高、体重、性别、生日都在表单中已有，前端本地即可计算 |
+| 计算复杂度 | 纯数学公式，JS 一行搞定，无需数据库或外部 API |
+| 实时性要求 | 用户输入身高/体重后应立即看到建议值，前端计算零延迟，后端会有网络往返 |
+| 持久化需求 | 计算结果只是"建议参考"显示给用户看，不需要存库（用户确认填入的体脂率才存 user_profile.body_fat_pct） |
+| 多端复用 | 虽然有 PC 和移动端两个前端，但体脂率估算公式是公开标准，前端各自实现几行代码即可 |
+
+### 9.3 前端实现建议
+
+#### 9.3.1 估算公式（基于 BMI 法，成年人）
+
+```javascript
+/**
+ * 基于 BMI 估算体脂率（仅供参考，非临床精确值）
+ * @param {number} weightKg  体重 kg
+ * @param {number} heightCm  身高 cm
+ * @param {number} gender    性别 1=男 2=女
+ * @param {string} birthday  生日 yyyy-MM-dd
+ * @returns {number|null}    体脂率 %（保留1位小数，限制 3-60%）
+ */
+function estimateBodyFat(weightKg, heightCm, gender, birthday) {
+    if (!weightKg || !heightCm || !gender || !birthday) return null
+    const g = (gender === 1) ? 1 : 0  // 男=1 女=0
+    const age = calcAge(birthday)
+    const bmi = weightKg / Math.pow(heightCm / 100, 2)
+    const bodyFat = (1.2 * bmi) + (0.23 * age) - (10.8 * g) - 5.4
+    return Math.max(3, Math.min(60, Number(bodyFat.toFixed(1))))
+}
+
+// 辅助：根据生日算年龄
+function calcAge(birthday) {
+    const birth = new Date(birthday)
+    const now = new Date()
+    let age = now.getFullYear() - birth.getFullYear()
+    const m = now.getMonth() - birth.getMonth()
+    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--
+    return age
+}
+```
+
+#### 9.3.2 交互设计
+
+- **触发时机**：身高、体重、性别、生日四个字段都有值时自动计算
+- **显示样式**：体脂率输入框 placeholder 显示浅灰色"建议 xx.x%"，用户可点击一键填入或手动修改
+- **关键提示**：标注"基于 BMI 估算，仅供参考，准确值请使用体脂秤"
+- **可编辑性**：用户可手动覆盖估算值（例如有体脂秤测量结果）
+
+#### 9.3.3 适用场景
+
+- **PC 端个人中心**：基本资料 Tab（BasicTab.vue）中的体脂率字段
+- **移动端个人中心**：身体数据录入页面的体脂率字段
+
+### 9.4 后端职责边界
+
+后端只负责：
+- 接收用户**最终确认**的 bodyFatPct 值并存入 user_profile
+- 校验 bodyFatPct 范围（3-60%，已通过 @DecimalMin/@DecimalMax 实现于 [UpdateProfileReq.java](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/user/dto/req/UpdateProfileReq.java)）
+
+估算公式的逻辑放后端反而会增加不必要的 API 调用和延迟，且公式简单到不值得抽成接口。
+
+### 9.5 公式局限性说明
+
+- BMI 法估算体脂率精度有限（±3-5%误差），仅作为用户填写参考
+- 对运动员、孕妇、老年人等特殊群体误差较大
+- 真正的体脂率应通过体脂秤、皮褶卡尺、DEXA 等方式测量
+- 前端需明确标注"仅供参考"字样，避免误导
+
+---
+
+## 十、个人中心资料卡视觉重构与体脂率估算实现（2026-08-19）
+
+### 10.1 重构目标
+
+原有 `BasicTab.vue`（个人中心-基本资料）布局为朴素的单列表单，视觉层次单薄，缺乏品牌感。本次重构在不改变数据结构和接口的前提下，通过 **卡片式分区布局** 提升视觉美感与信息组织度，并同步落地 §九 中已决策的体脂率前端估算功能。
+
+### 10.2 视觉分区设计
+
+将原单列表单拆分为 4 个视觉区块，每个区块均采用带阴影、圆角的独立卡片：
+
+| 区块 | 视觉特征 | 承载内容 |
+|---|---|---|
+| **个人名片卡** | 渐变光晕背景 + 圆形大头像 + 等级徽章 Tag + 芯片式元信息 | 头像、昵称、健身等级、个人简介、性别/生日/身高 chip |
+| **基本信息区** | 白色卡片 + 栅格表单（2 列） + 品牌色分段控件 | 昵称、性别（分段控件）、生日、健身等级、简介 |
+| **身体数据区** | A 紫色分区标识 | 身高、体重、体脂率（含估算交互） |
+| **训练目标区** | C 绿色分区标识 + 独立保存按钮 | 目标类型、体重/体脂目标、训练频率、营养目标、日期 |
+
+**卡片样式要点**：
+- 主卡片圆角 `16-18px`，阴影使用 `--shadow-soft` CSS 变量
+- 区块头部带 icon + 标题 + 右对齐说明文字，底部带分隔线
+- 表单使用 CSS Grid `grid-template-columns: repeat(2, 1fr)` 自动 2 列
+- 分段控件（性别）使用品牌紫 `--fit-brand` 高亮，选中时带投影
+- 响应式：720px 以下自动切换为单列
+
+### 10.3 体脂率估算交互实现
+
+按 §九 决策，在 `BasicTab.vue` 中实现 Deurenberg 公式前端估算：
+
+**触发条件**（全部满足时实时计算）：
+- 身高 `heightCm` > 0
+- 体重 `weightKg` > 0
+- 性别 `gender` ∈ {1, 2}（男/女）
+- 生日 `birthday` 有效，且年龄在 10-100 岁之间
+
+**交互细节**：
+- 体脂率输入框的 `placeholder` 动态显示 `建议 xx.x%（由 BMI 估算）`
+- 当估算值与当前手填值不同时，显示 `填入 xx.x%` 一键填入按钮
+- 估算下方显示提示行：`💡 根据身高 Xcm / 体重 Ykg / 性别 / Z岁 估算`
+- 始终显示免责提示条：`⚠️ 基于 BMI 法估算，仅供参考。准确值请使用体脂秤测量。`（虚边框 + 柔和背景）
+- 限制范围 3-60%，超出自动 clamp
+
+**数据流向**：
+```
+用户输入身高/体重/性别/生日
+  → computed(estimatedBodyFat) 实时计算
+  → computed(bodyFatPlaceholder) 更新 placeholder
+  → 显示填入按钮 + 提示行
+  → 用户点击"填入" → form.bodyFatPct = estimatedBodyFat
+  → 保存时 bodyFatPct 随 profile 一起提交到后端
+```
+
+### 10.4 实现文件
+
+| 文件 | 变更类型 | 说明 |
+|---|---|---|
+| `fitness-web-admin/src/views/profile/tabs/BasicTab.vue` | 重构 | 模板重写为卡片分区，新增估算逻辑、交互 UI 和全部样式 |
+| `fitness-web-admin/src/mock/user.js` | 复用 | 无需改动，已有 weightKg/bodyFatPct/fitnessLevel 字段 |
+| `fitness-web-admin/src/api/user.js` | 复用 | 无需改动，updateMyProfile 已接收 bodyFatPct |
+
+### 10.5 后续接入真实后端
+
+- 当前 mock 已返回 `bodyFatPct` 初始值，用户填入的估算值会通过 `updateMyProfile` 提交到 `PUT /api/v1/user/profile`
+- 后端 `UpdateProfileReq.bodyFatPct` 已有 `@DecimalMin("3") @DecimalMax("60")` 范围校验
+- 切换真实后端：`.env` 设 `VITE_USE_MOCK=false` 即可，无需改动前端业务代码
+
 
 

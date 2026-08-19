@@ -1,113 +1,203 @@
 <template>
-  <div v-loading="loading" class="fp-tab">
-    <el-form :model="form" label-width="100px" class="fp-form">
-      <el-form-item label="头像">
-        <div class="fp-avatar-row">
-          <div class="fp-avatar">
+  <div v-loading="loading" class="fp-profile-editor">
+    <!-- ====== 个人名片卡 ====== -->
+    <div class="fp-hero-card">
+      <div class="fp-hero-card__glow" />
+      <div class="fp-hero-card__content">
+        <div class="fp-avatar-wrap">
+          <div class="fp-avatar-lg">
             <img v-if="form.avatarUrl" :src="form.avatarUrl" alt="avatar" />
             <span v-else>{{ letterAvatar }}</span>
           </div>
-          <el-upload
-            :show-file-list="false"
-            :http-request="onAvatarUpload"
-            accept="image/*"
-          >
-            <el-button :loading="uploading" plain>
-              <el-icon><Upload /></el-icon><span>更换头像</span>
+          <el-upload :show-file-list="false" :http-request="onAvatarUpload" accept="image/*">
+            <el-button class="fp-avatar-btn" :loading="uploading" circle size="small">
+              <el-icon><Camera /></el-icon>
             </el-button>
           </el-upload>
-          <span class="fp-hint">支持 JPG/PNG，建议 256×256</span>
         </div>
-      </el-form-item>
+        <div class="fp-hero-info">
+          <h2 class="fp-hero-name">
+            {{ form.nickname || 'FitPulse 用户' }}
+            <el-tag v-if="form.fitnessLevel" :type="levelTagType" effect="dark" size="small" class="fp-level-tag">
+              {{ levelText }}
+            </el-tag>
+          </h2>
+          <p class="fp-hero-bio">{{ form.bio || '这个人很懒，还没有介绍自己' }}</p>
+          <div class="fp-hero-meta">
+            <span v-if="form.gender" class="fp-hero-chip">
+              <el-icon><component :is="form.gender === 1 ? 'Male' : 'Female'" /></el-icon>
+              {{ form.gender === 1 ? '男' : '女' }}
+            </span>
+            <span v-if="form.birthday" class="fp-hero-chip">
+              <el-icon><Calendar /></el-icon>
+              {{ form.birthday }}
+            </span>
+            <span v-if="form.heightCm" class="fp-hero-chip">
+              <el-icon><Ruler /></el-icon>
+              {{ form.heightCm }} cm
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
 
-      <el-form-item label="昵称">
-        <el-input v-model="form.nickname" maxlength="32" show-word-limit />
-      </el-form-item>
+    <!-- ====== 基本信息 ====== -->
+    <div class="fp-section">
+      <div class="fp-section-header">
+        <el-icon><User /></el-icon>
+        <span>基本信息</span>
+      </div>
+      <div class="fp-section-body">
+        <el-form :model="form" label-position="top" class="fp-form-grid">
+          <el-form-item label="昵称" required>
+            <el-input v-model="form.nickname" maxlength="32" show-word-limit placeholder="给自己起一个响亮的名字" />
+          </el-form-item>
+          <el-form-item label="性别">
+            <el-radio-group v-model="form.gender" class="fp-seg">
+              <el-radio-button :value="1">男</el-radio-button>
+              <el-radio-button :value="2">女</el-radio-button>
+              <el-radio-button :value="0">未知</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="生日">
+            <el-date-picker v-model="form.birthday" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" style="width:100%" />
+          </el-form-item>
+          <el-form-item label="健身等级">
+            <el-select v-model="form.fitnessLevel" placeholder="选择你的健身水平" style="width:100%">
+              <el-option :value="1" label="入门" />
+              <el-option :value="2" label="进阶" />
+              <el-option :value="3" label="达人" />
+              <el-option :value="4" label="专业" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="简介" class="fp-form-item--full">
+            <el-input v-model="form.bio" type="textarea" :rows="2" maxlength="200" show-word-limit placeholder="一句话介绍自己的训练理念" />
+          </el-form-item>
+        </el-form>
+      </div>
+    </div>
 
-      <el-form-item label="性别">
-        <el-radio-group v-model="form.gender">
-          <el-radio :value="1">男</el-radio>
-          <el-radio :value="2">女</el-radio>
-          <el-radio :value="0">未知</el-radio>
-        </el-radio-group>
-      </el-form-item>
+    <!-- ====== 身体数据 ====== -->
+    <div class="fp-section">
+      <div class="fp-section-header fp-section-header--A">
+        <el-icon><DataLine /></el-icon>
+        <span>身体数据</span>
+        <span class="fp-section-hint">（体重/体脂由身体数据模块自动同步）</span>
+      </div>
+      <div class="fp-section-body">
+        <el-form :model="form" label-position="top" class="fp-form-grid">
+          <el-form-item label="身高 (cm)">
+            <el-input-number v-model="form.heightCm" :min="100" :max="250" :precision="1" style="width:100%" />
+          </el-form-item>
+          <el-form-item label="体重 (kg)">
+            <el-input-number v-model="form.weightKg" :min="30" :max="200" :precision="1" disabled style="width:100%" />
+          </el-form-item>
+          <!-- 体脂率：支持估算 + 手动覆盖 -->
+          <el-form-item label="体脂率 (%)" class="fp-form-item--bodyfat">
+            <div class="fp-bodyfat-wrap">
+              <el-input-number
+                v-model="form.bodyFatPct"
+                :min="3" :max="60" :precision="1"
+                :placeholder="bodyFatPlaceholder"
+                style="width:100%"
+              />
+              <el-button
+                v-if="estimatedBodyFat && form.bodyFatPct !== estimatedBodyFat"
+                size="small"
+                type="primary"
+                plain
+                @click="applyEstimatedBodyFat"
+              >
+                填入 {{ estimatedBodyFat }}%
+              </el-button>
+            </div>
+            <div v-if="estimatedBodyFat && form.bodyFatPct !== estimatedBodyFat" class="fp-bodyfat-hint">
+              💡 根据身高 {{ form.heightCm }}cm / 体重 {{ form.weightKg }}kg / {{ form.gender === 1 ? '男' : '女' }} / {{ age }}岁 估算
+            </div>
+            <div class="fp-bodyfat-disclaimer">
+              <el-icon><Warning /></el-icon>
+              基于 BMI 法估算，仅供参考。准确值请使用体脂秤测量。
+            </div>
+          </el-form-item>
+        </el-form>
+      </div>
+    </div>
 
-      <el-form-item label="生日">
-        <el-date-picker v-model="form.birthday" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" />
-      </el-form-item>
+    <!-- ====== 操作按钮 ====== -->
+    <div class="fp-actions">
+      <el-button type="primary" size="large" :loading="saving" @click="onSaveProfile">
+        <el-icon><Check /></el-icon>保存资料
+      </el-button>
+      <el-button size="large" @click="load">
+        <el-icon><Refresh /></el-icon>重置
+      </el-button>
+    </div>
 
-      <el-form-item label="身高 (cm)">
-        <el-input-number v-model="form.heightCm" :min="100" :max="250" :precision="1" />
-      </el-form-item>
-
-      <el-form-item label="体重 (kg)">
-        <el-input-number v-model="form.weightKg" :min="30" :max="200" :precision="1" disabled />
-        <span class="fp-hint">由身体数据自动同步</span>
-      </el-form-item>
-
-      <el-form-item label="体脂率 (%)">
-        <el-input-number v-model="form.bodyFatPct" :min="3" :max="60" :precision="1" disabled />
-        <span class="fp-hint">由身体数据自动同步</span>
-      </el-form-item>
-
-      <el-form-item label="健身等级">
-        <el-select v-model="form.fitnessLevel" placeholder="选择等级">
-          <el-option :value="1" label="入门" />
-          <el-option :value="2" label="进阶" />
-          <el-option :value="3" label="达人" />
-          <el-option :value="4" label="专业" />
-        </el-select>
-      </el-form-item>
-
-      <el-form-item label="简介">
-        <el-input v-model="form.bio" type="textarea" :rows="3" maxlength="200" show-word-limit />
-      </el-form-item>
-
-      <el-form-item>
-        <el-button type="primary" :loading="saving" @click="onSaveProfile">保存资料</el-button>
-        <el-button @click="load">重置</el-button>
-      </el-form-item>
-    </el-form>
-
-    <el-divider content-position="left">训练目标</el-divider>
-
-    <el-form :model="form.goal" label-width="100px" class="fp-form">
-      <el-form-item label="目标类型">
-        <el-select v-model="form.goal.goalType">
-          <el-option :value="1" label="减脂" />
-          <el-option :value="2" label="增肌" />
-          <el-option :value="3" label="塑形" />
-          <el-option :value="4" label="维持健康" />
-          <el-option :value="5" label="力量举" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="目标体重"><el-input-number v-model="form.goal.targetWeight" :min="30" :max="200" :precision="1" /></el-form-item>
-      <el-form-item label="目标体脂"><el-input-number v-model="form.goal.targetBodyFat" :min="3" :max="60" :precision="1" /></el-form-item>
-      <el-form-item label="每周训练"><el-input-number v-model="form.goal.weeklyWorkouts" :min="1" :max="14" /></el-form-item>
-      <el-form-item label="每日热量"><el-input-number v-model="form.goal.dailyCalories" :min="1000" :max="5000" :step="50" /></el-form-item>
-      <el-form-item label="每日饮水"><el-input-number v-model="form.goal.dailyWaterMl" :min="500" :max="5000" :step="100" /></el-form-item>
-      <el-form-item label="开始日期">
-        <el-date-picker v-model="form.goal.startDate" type="date" value-format="YYYY-MM-DD" disabled />
-      </el-form-item>
-      <el-form-item label="目标日期">
-        <el-date-picker v-model="form.goal.targetDate" type="date" value-format="YYYY-MM-DD" />
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" :loading="savingGoal" @click="onSaveGoal">保存目标</el-button>
-      </el-form-item>
-    </el-form>
+    <!-- ====== 训练目标 ====== -->
+    <div class="fp-section fp-section--goal">
+      <div class="fp-section-header fp-section-header--C">
+        <el-icon><Aim /></el-icon>
+        <span>训练目标</span>
+      </div>
+      <div class="fp-section-body">
+        <el-form :model="form.goal" label-position="top" class="fp-form-grid">
+          <el-form-item label="目标类型">
+            <el-select v-model="form.goal.goalType" style="width:100%">
+              <el-option :value="1" label="减脂" />
+              <el-option :value="2" label="增肌" />
+              <el-option :value="3" label="塑形" />
+              <el-option :value="4" label="维持健康" />
+              <el-option :value="5" label="力量举" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="目标体重 (kg)">
+            <el-input-number v-model="form.goal.targetWeight" :min="30" :max="200" :precision="1" style="width:100%" />
+          </el-form-item>
+          <el-form-item label="目标体脂 (%)">
+            <el-input-number v-model="form.goal.targetBodyFat" :min="3" :max="60" :precision="1" style="width:100%" />
+          </el-form-item>
+          <el-form-item label="每周训练 (次)">
+            <el-input-number v-model="form.goal.weeklyWorkouts" :min="1" :max="14" style="width:100%" />
+          </el-form-item>
+          <el-form-item label="每日热量 (kcal)">
+            <el-input-number v-model="form.goal.dailyCalories" :min="1000" :max="5000" :step="50" style="width:100%" />
+          </el-form-item>
+          <el-form-item label="每日饮水 (ml)">
+            <el-input-number v-model="form.goal.dailyWaterMl" :min="500" :max="5000" :step="100" style="width:100%" />
+          </el-form-item>
+          <el-form-item label="开始日期">
+            <el-date-picker v-model="form.goal.startDate" type="date" value-format="YYYY-MM-DD" disabled style="width:100%" />
+          </el-form-item>
+          <el-form-item label="目标日期">
+            <el-date-picker v-model="form.goal.targetDate" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" style="width:100%" />
+          </el-form-item>
+        </el-form>
+        <div class="fp-section-footer">
+          <el-button type="primary" :loading="savingGoal" @click="onSaveGoal">
+            <el-icon><Target /></el-icon>保存目标
+          </el-button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 /**
- * 基本资料 Tab
- * - 头像上传（el-upload custom http-request → uploadAvatar）
- * - 资料表单（昵称/性别/生日/身高/简介/健身等级）
- * - 体重/体脂只读（缓存自 body_metric，由健康模块写入）
- * - 训练目标表单（goal 子对象，独立保存）
+ * 基本资料 Tab（视觉重构 + 体脂率估算）
+ *
+ * 视觉：卡片式分区布局
+ *   - 个人名片卡：渐变光晕背景 + 大头像 + 等级徽章 + 资料简介 + 芯片式元信息
+ *   - 基本信息区：栅格布局 + 分段控件
+ *   - 身体数据区：A 紫色分区标识 + 体脂率估算交互
+ *   - 训练目标区：C 绿色分区标识 + 独立保存
+ *
+ * 体脂率估算：Deurenberg 公式（见 devlog §9.3.1）
+ *   - 触发：身高/体重/性别/生日四字段齐全时实时计算
+ *   - 显示：placeholder 显示"建议 xx.x%"，一键填入按钮
+ *   - 限制：3-60%，仅作参考
  */
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getMyProfile, updateMyProfile, updateMyGoal, uploadAvatar } from '@/api/user'
 
@@ -127,7 +217,66 @@ const form = reactive({
   }
 })
 
+/* ========== 体脂率估算逻辑 ========== */
+
+function calcAge(birthday) {
+  if (!birthday) return null
+  const birth = new Date(birthday)
+  if (isNaN(birth.getTime())) return null
+  const now = new Date()
+  let age = now.getFullYear() - birth.getFullYear()
+  const m = now.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--
+  return age
+}
+
+/**
+ * Deurenberg 公式估算体脂率（BMI 法，仅供参考）
+ * bodyFat = 1.2*BMI + 0.23*age - 10.8*gender - 5.4
+ * gender: 男=1, 女=0
+ */
+function estimateBodyFat(weightKg, heightCm, gender, birthday) {
+  if (!weightKg || !heightCm || weightKg <= 0 || heightCm <= 0) return null
+  if (!gender || gender === 0 || !birthday) return null
+  const g = gender === 1 ? 1 : 0
+  const age = calcAge(birthday)
+  if (!age || age < 10 || age > 100) return null
+  const bmi = weightKg / Math.pow(heightCm / 100, 2)
+  const bodyFat = (1.2 * bmi) + (0.23 * age) - (10.8 * g) - 5.4
+  const clamped = Math.max(3, Math.min(60, bodyFat))
+  return Number(clamped.toFixed(1))
+}
+
+const estimatedBodyFat = computed(() =>
+  estimateBodyFat(form.weightKg, form.heightCm, form.gender, form.birthday)
+)
+
+const age = computed(() => calcAge(form.birthday) ?? '—')
+
+const bodyFatPlaceholder = computed(() => {
+  if (!estimatedBodyFat.value) return '体脂率 (%)'
+  return `建议 ${estimatedBodyFat.value}%（由 BMI 估算）`
+})
+
+function applyEstimatedBodyFat() {
+  if (estimatedBodyFat.value) {
+    form.bodyFatPct = estimatedBodyFat.value
+  }
+}
+
+/* ========== 等级徽章 ========== */
+const levelText = computed(() => {
+  const map = { 1: '入门', 2: '进阶', 3: '达人', 4: '专业' }
+  return map[form.fitnessLevel] || ''
+})
+const levelTagType = computed(() => {
+  const map = { 1: 'info', 2: '', 3: 'warning', 4: 'danger' }
+  return map[form.fitnessLevel] || ''
+})
+
 const letterAvatar = computed(() => (form.nickname || 'F').charAt(0).toUpperCase())
+
+/* ========== 数据加载与保存 ========== */
 
 async function load() {
   loading.value = true
@@ -163,6 +312,7 @@ async function onSaveProfile() {
       gender: form.gender,
       birthday: form.birthday,
       heightCm: form.heightCm,
+      bodyFatPct: form.bodyFatPct,
       fitnessLevel: form.fitnessLevel,
       bio: form.bio
     }
@@ -191,24 +341,191 @@ onMounted(load)
 </script>
 
 <style scoped>
-.fp-tab { padding: 4px 0; }
-.fp-form { max-width: 640px; }
-.fp-avatar-row {
+.fp-profile-editor {
+  padding: 0 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ========== 个人名片卡 ========== */
+.fp-hero-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 28px 32px;
+  box-shadow: var(--shadow-soft);
+}
+.fp-hero-card__glow {
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(124,92,255,0.25), transparent 70%);
+  pointer-events: none;
+}
+.fp-hero-card__content {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
+  gap: 28px;
 }
-.fp-avatar {
-  width: 72px; height: 72px;
+
+.fp-avatar-wrap { position: relative; flex-shrink: 0; }
+.fp-avatar-lg {
+  width: 96px; height: 96px;
   border-radius: 50%;
   background: linear-gradient(135deg, #7c5cff, #22d3ee);
   color: #fff;
   display: flex; align-items: center; justify-content: center;
-  font-size: 28px; font-weight: 700;
+  font-size: 40px; font-weight: 700;
   overflow: hidden;
-  border: 2px solid var(--border);
+  border: 3px solid var(--card);
+  box-shadow: 0 8px 24px -4px rgba(124, 92, 255, 0.45);
 }
-.fp-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.fp-hint { color: var(--text-muted); font-size: 12px; }
+.fp-avatar-lg img { width: 100%; height: 100%; object-fit: cover; }
+.fp-avatar-btn {
+  position: absolute;
+  bottom: -4px; right: -4px;
+  background: var(--fit-brand);
+  border: 3px solid var(--card);
+  color: #fff;
+  width: 32px; height: 32px;
+  z-index: 2;
+}
+.fp-avatar-btn:hover { background: #6a48e6; }
+
+.fp-hero-info { flex: 1; min-width: 0; }
+.fp-hero-name {
+  margin: 0;
+  font-size: 22px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.fp-level-tag { font-size: 11px; }
+.fp-hero-bio {
+  margin: 6px 0 10px;
+  font-size: 13px;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+.fp-hero-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.fp-hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  color: var(--text-soft);
+  font-size: 12px;
+  border: 1px solid var(--border);
+}
+
+/* ========== 分区卡 ========== */
+.fp-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+.fp-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  background: var(--card-2);
+}
+.fp-section-header .el-icon { color: var(--fit-brand); font-size: 16px; }
+.fp-section-header--A .el-icon { color: var(--dim-A); }
+.fp-section-header--C .el-icon { color: var(--dim-C); }
+.fp-section-hint { font-weight: 400; font-size: 12px; color: var(--text-muted); margin-left: auto; }
+.fp-section-body { padding: 20px 24px; }
+.fp-section-footer {
+  padding: 12px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  background: var(--card-2);
+}
+
+/* ========== 表单栅格 ========== */
+.fp-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 20px;
+}
+.fp-form-grid .fp-form-item--full { grid-column: 1 / -1; }
+.fp-form-grid .fp-form-item--bodyfat { grid-column: 1 / -1; }
+
+/* 分段控件美化 */
+.fp-seg :deep(.el-radio-button__inner) {
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text-soft);
+}
+.fp-seg :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  background: var(--fit-brand);
+  color: #fff;
+  border-color: var(--fit-brand);
+  box-shadow: 0 2px 8px -2px rgba(124, 92, 255, 0.5);
+}
+
+/* ========== 体脂率估算区 ========== */
+.fp-bodyfat-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fp-bodyfat-wrap .el-input-number { flex: 1; }
+.fp-bodyfat-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--dim-A);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.fp-bodyfat-disclaimer {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--bg-soft);
+  border: 1px dashed var(--border);
+}
+
+/* ========== 操作按钮 ========== */
+.fp-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 响应式：窄屏栅格单列 */
+@media (max-width: 720px) {
+  .fp-form-grid { grid-template-columns: 1fr; }
+  .fp-hero-card__content { flex-direction: column; text-align: center; }
+  .fp-hero-meta { justify-content: center; }
+  .fp-section-hint { display: none; }
+}
 </style>
