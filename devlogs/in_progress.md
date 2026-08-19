@@ -751,6 +751,101 @@ P4+ 合并提交。
 
 ---
 
+## 十二、P5 头像上传 + 统计接口（2026-08-19 完成）
+
+### 12.1 文件清单
+
+| 文件 | 类型 | 说明 |
+|---|---|---|
+| `user/dto/vo/AvatarUploadVO.java` | 新建 | 头像上传响应 VO |
+| `user/dto/vo/TrainingStatsVO.java` | 新建 | 训练统计响应 VO |
+| `user/dto/vo/HealthOverviewVO.java` | 新建 | 健康概览响应 VO |
+| `user/dto/projection/WorkoutStatsProjection.java` | 新建 | 训练统计投影（Mapper 返回类型） |
+| `user/dto/projection/LatestBodyMetricProjection.java` | 新建 | 最新身体指标投影 |
+| `user/mapper/UserStatsMapper.java` | 新建 | 跨模块聚合查询 Mapper（@Select 注解 SQL） |
+| `user/service/UserService.java` | 修改 | 新增 3 个方法接口 |
+| `user/service/impl/UserServiceImpl.java` | 修改 | 新增 3 个方法实现 + streak 计算 |
+| `user/controller/UserController.java` | 修改 | 新增 3 个端点（avatar/stats/overview） |
+
+### 12.2 设计模式与编码技巧
+
+#### 投影模式（Projection Pattern）
+
+**位置**：[WorkoutStatsProjection.java](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/user/dto/projection/WorkoutStatsProjection.java) + [LatestBodyMetricProjection.java](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/user/dto/projection/LatestBodyMetricProjection.java)
+
+**学习点**：
+- 聚合查询不需要完整实体（如 WorkoutRecord 有 10+ 字段，但 stats 只需要 3 个聚合值）
+- 投影类只包含查询需要的字段，避免创建完整实体的 scope 蔓延
+- 比用 Map<String,Object> 更类型安全，IDE 有自动补全
+- 这是 CQRS（命令查询职责分离）思想中"查询侧"的简化形式
+
+```java
+// 不好的写法（创建完整实体，scope 蔓延）：
+WorkoutRecord record = workoutRecordMapper.selectById(...);
+// 然后从 record 中取 3 个字段，其他 7 个字段都浪费了
+
+// 好的写法（投影类，只取需要的字段）：
+WorkoutStatsProjection projection = userStatsMapper.selectWorkoutStats(userId);
+// projection 只有 totalWorkouts/totalVolume/lastWorkoutDate 三个字段
+```
+
+#### 门面模式（Facade Pattern）- 头像上传
+
+**位置**：[UserServiceImpl.java#uploadAvatar](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/user/service/impl/UserServiceImpl.java)
+
+**学习点**：
+- User 模块不直接处理文件存储，委托给 FileService 完成落盘 + 写 file_resource 表
+- User 模块只负责"拿到 URL 后回写 user_profile.avatar_url"
+- 门面模式简化了跨模块协作，Controller 只调一个方法
+
+```java
+// User 模块内部组合两个步骤：
+var uploadVO = fileService.upload(file, "avatar", userId);  // 委托文件存储
+profile.setAvatarUrl(uploadVO.getFileUrl());               // 回写 user_profile
+userProfileMapper.updateById(profile);
+```
+
+#### 连续训练天数（Streak）计算 - Java 层 vs SQL 层
+
+**位置**：[UserServiceImpl.java#calculateCurrentStreak](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/user/service/impl/UserServiceImpl.java)
+
+**学习点**：
+- streak 计算放在 Java 层而非 SQL 层，原因：
+  1. SQL 窗口函数计算 streak 复杂且难调试
+  2. Java 层逻辑清晰，易于单元测试
+  3. 最近 30 天数据量小（最多 30 行），全量查出无性能问题
+- 规则：从今天往前数，今天有训练则算 1，昨天有则 +1，遇到断档就结束
+- 兼容"今天还没练"的场景：今天没记录但昨天有，从昨天开始算
+
+#### CQRS 查询侧思想
+
+**位置**：[UserStatsMapper.java](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/user/mapper/UserStatsMapper.java)
+
+**学习点**：
+- 命令侧（CUD）用 MyBatis-Plus 的 BaseMapper（实体 + LambdaQueryWrapper）
+- 查询侧（R）用 @Select 注解写原生 SQL，返回投影类
+- 这是 CQRS（Command Query Responsibility Segregation）的简化形式
+- 好处：查询不依赖实体定义，可以跨表聚合，性能更优
+
+### 12.3 接口清单
+
+| 方法 | 路径 | 功能 |
+|---|---|---|
+| POST | `/user/avatar` | 上传头像（multipart/form-data） |
+| GET | `/user/stats` | 训练统计概览（累计次数/容量/连续天数/最近训练） |
+| GET | `/user/overview` | 健康概览（最新体重/体脂 + 今日热量/饮水） |
+
+### 12.4 编译验证
+
+- `mvn compile` 通过（exit code 0）
+- 无编译错误
+
+### 12.5 git 提交
+
+P5 合并提交。
+
+---
+
 ## 十、个人中心资料卡视觉重构与体脂率估算实现（2026-08-19）
 
 ### 10.1 重构目标

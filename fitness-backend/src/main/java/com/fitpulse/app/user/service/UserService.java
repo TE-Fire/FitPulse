@@ -3,13 +3,15 @@ package com.fitpulse.app.user.service;
 import com.fitpulse.app.user.dto.req.ChangePasswordReq;
 import com.fitpulse.app.user.dto.req.UpdateAccountReq;
 import com.fitpulse.app.user.dto.req.UpdateProfileReq;
+import com.fitpulse.app.user.dto.vo.AvatarUploadVO;
+import com.fitpulse.app.user.dto.vo.HealthOverviewVO;
+import com.fitpulse.app.user.dto.vo.TrainingStatsVO;
 import com.fitpulse.app.user.dto.vo.UserProfileVO;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
- * User 业务接口：个人资料 / 账号信息 / 密码。
+ * User 业务接口：个人资料 / 账号信息 / 密码 / 头像 / 统计。
  * <p>Controller 面向此接口注入，Spring 自动装配 impl 包下的实现类。
- * <p>本次范围仅包含 P3 的 4 个方法（profile GET/PUT、account PUT、password PUT）。
- * 头像上传（P5.1）、训练统计（P5.2）、健康概览（P5.3）将在后续阶段补入。
  */
 public interface UserService {
 
@@ -48,4 +50,31 @@ public interface UserService {
      * @param req    修改密码请求
      */
     void changePassword(Long userId, ChangePasswordReq req);
+
+    /**
+     * 上传头像（委托 FileService 存储 + 更新 user_profile.avatar_url）。
+     * <p>【门面模式】User 模块不直接处理文件存储，而是委托给 FileService 完成落盘，
+     * 自己只负责"拿到 URL 后回写 user_profile"。
+     *
+     * @param userId 当前登录用户 ID
+     * @param file   头像图片文件
+     * @return 头像上传响应（含可访问 URL）
+     */
+    AvatarUploadVO uploadAvatar(Long userId, MultipartFile file);
+
+    /**
+     * 查询训练统计概览（聚合 workout_record 表）。
+     * <p>包含累计训练次数、累计训练容量、当前连续训练天数、最近一次训练日期。
+     *
+     * @param userId 当前登录用户 ID
+     */
+    TrainingStatsVO getTrainingStats(Long userId);
+
+    /**
+     * 查询健康概览（聚合 body_metric + meal_record + water_log 三表当日数据）。
+     * <p>包含最新体重/体脂、今日摄入热量、今日饮水量。
+     *
+     * @param userId 当前登录用户 ID
+     */
+    HealthOverviewVO getHealthOverview(Long userId);
 }
