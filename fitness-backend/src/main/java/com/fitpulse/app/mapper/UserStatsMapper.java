@@ -1,4 +1,4 @@
-package com.fitpulse.app.user.mapper;
+package com.fitpulse.app.mapper;
 
 import com.fitpulse.app.user.dto.projection.LatestBodyMetricProjection;
 import com.fitpulse.app.user.dto.projection.WorkoutStatsProjection;
@@ -17,6 +17,8 @@ import java.util.List;
  * <p>不创建 training/health 模块的完整实体（避免 scope 蔓延），而是用 @Select 注解写原生 SQL，
  * 结果映射到轻量级投影类（Projection），实现"按需取字段"。
  * <p>这是单体架构中跨模块聚合的常见做法——查询侧独立于命令侧，不需要业务实体的完整定义。
+ * <p>【包位置说明】放在 com.fitpulse.app.mapper 而非 user.mapper，
+ * 因为 @MapperScan 只扫描 com.fitpulse.app.mapper 包，与 UserMapper/UserProfileMapper 保持一致。
  */
 @Mapper
 public interface UserStatsMapper {

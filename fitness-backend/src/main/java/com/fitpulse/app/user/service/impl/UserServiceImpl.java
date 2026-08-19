@@ -3,6 +3,7 @@ package com.fitpulse.app.user.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fitpulse.app.entity.User;
 import com.fitpulse.app.entity.UserProfile;
+import com.fitpulse.app.file.dto.vo.FileUploadVO;
 import com.fitpulse.app.file.service.FileService;
 import com.fitpulse.app.mapper.UserMapper;
 import com.fitpulse.app.mapper.UserProfileMapper;
@@ -16,7 +17,7 @@ import com.fitpulse.app.user.dto.vo.HealthOverviewVO;
 import com.fitpulse.app.user.dto.vo.TrainingStatsVO;
 import com.fitpulse.app.user.dto.vo.UserProfileVO;
 import com.fitpulse.app.user.enums.UserErrorCode;
-import com.fitpulse.app.user.mapper.UserStatsMapper;
+import com.fitpulse.app.mapper.UserStatsMapper;
 import com.fitpulse.app.user.service.UserService;
 import com.fitpulse.app.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
@@ -245,7 +246,7 @@ public class UserServiceImpl implements UserService {
 
         // 2. 委托 FileService 上传文件（bucket=avatar，复用通用上传逻辑）
         // 【门面模式】User 模块不直接处理文件存储，委托给 FileService 完成落盘 + 写 file_resource 表
-        var uploadVO = fileService.upload(file, "avatar", userId);
+        FileUploadVO uploadVO = fileService.upload(file, "avatar", userId);
         String avatarUrl = uploadVO.getFileUrl();
 
         // 3. 更新 user_profile.avatar_url（不存在则自动创建）
