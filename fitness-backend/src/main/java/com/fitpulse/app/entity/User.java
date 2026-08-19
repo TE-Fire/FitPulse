@@ -19,6 +19,11 @@ public class User {
     private String email;
 
     /**
+     * 手机号
+     */
+    private String phone;
+
+    /**
      * 1-启用 0-禁用
      */
     private Integer status;
