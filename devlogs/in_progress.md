@@ -484,6 +484,168 @@ function calcAge(birthday) {
 
 ---
 
+## 十、File 模块最小实现 P4（2026-08-19 完成）
+
+### 10.1 文件清单
+
+| 文件 | 类型 | 说明 |
+|---|---|---|
+| `entity/FileResource.java` | 新建 | 文件资源实体（对应 file_resource 表） |
+| `mapper/FileResourceMapper.java` | 新建 | 文件资源 Mapper |
+| `file/service/FileStorageService.java` | 新建 | 【策略模式】文件存储抽象接口 |
+| `file/service/impl/LocalFileStorageServiceImpl.java` | 新建 | 【策略模式-具体策略】本地磁盘存储实现 |
+| `file/service/FileService.java` | 新建 | 【门面模式】业务接口 |
+| `file/service/impl/FileServiceImpl.java` | 新建 | 业务实现：存储 + 写 DB |
+| `file/controller/FileController.java` | 新建 | POST /api/v1/file/upload 端点 |
+| `file/dto/vo/FileUploadVO.java` | 新建 | 上传响应 VO |
+| `file/enums/FileErrorCode.java` | 新建 | 5 个枚举值（400/500 大类） |
+| `common/config/WebMvcConfig.java` | 新建 | 静态资源映射 /files/** → 本地磁盘 |
+| `application.yml` | 修改 | 新增 fitpulse.storage 配置段 |
+| `application-demo.yml` | 修改 | 同步 storage 配置占位 |
+| `application-dev.yml` | 修改 | 同步 storage 配置（type=local，path=D:/FitPulseData/files） |
+
+### 10.2 设计模式与编码技巧
+
+#### 策略模式（Strategy Pattern）
+
+**位置**：[FileStorageService.java](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/file/service/FileStorageService.java) + [LocalFileStorageServiceImpl.java](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/file/service/impl/LocalFileStorageServiceImpl.java)
+
+**学习点**：
+- 将"文件存储"这一行为抽象为接口，不同实现代表不同存储策略
+- 当前只有本地存储实现，未来新增 MinIO 实现只需新增一个类，不改现有代码
+- 符合"开闭原则"（对扩展开放，对修改关闭）
+- FileService 面向接口注入 FileStorageService，切换实现只需改配置
+
+```java
+// 接口（抽象策略）：
+public interface FileStorageService {
+    FileResource store(MultipartFile file, String bucket, Long userId);
+}
+
+// 本地实现（具体策略 1）：
+@Service
+public class LocalFileStorageServiceImpl implements FileStorageService { ... }
+
+// 未来 MinIO 实现只需新增（具体策略 2）：
+// @Service
+// @ConditionalOnProperty(name = "fitpulse.storage.type", havingValue = "minio")
+// public class MinioFileStorageServiceImpl implements FileStorageService { ... }
+```
+
+#### 门面模式（Facade Pattern）思想
+
+**位置**：[FileServiceImpl.java](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/file/service/impl/FileServiceImpl.java)
+
+**学习点**：
+- FileService 作为业务门面，内部组合"存储 + 写 DB"两步操作
+- 对 Controller 屏蔽底层存储细节（Controller 不知道是本地还是 MinIO）
+- 门面模式简化了客户端调用，Controller 只需调一个方法
+
+```java
+// Controller 只调一个方法，不关心存储细节：
+fileService.upload(file, bucket, userId);
+
+// FileServiceImpl 内部组合两步：
+FileResource fileResource = fileStorageService.store(file, bucket, userId);  // 委托存储
+fileResourceMapper.insert(fileResource);                                      // 写 DB
+```
+
+#### 路径穿越攻击防御
+
+**位置**：[LocalFileStorageServiceImpl.java#validateBucket](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/file/service/impl/LocalFileStorageServiceImpl.java)
+
+**学习点**：
+- bucket 参数直接拼接到文件路径，如果不校验，攻击者可传 `../../etc` 之类的恶意值
+- 使用白名单（Set.contains）而非黑名单，更安全
+- 文件扩展名同样用白名单校验，防止上传 .exe/.jsp 等危险文件
+
+```java
+// 白名单校验，防止路径穿越：
+private static final Set<String> ALLOWED_BUCKETS = Set.of("avatar", "exercise", "food", "general");
+
+private void validateBucket(String bucket) {
+    if (bucket == null || !ALLOWED_BUCKETS.contains(bucket)) {
+        throw new BusinessException(FileErrorCode.BUCKET_INVALID);
+    }
+}
+```
+
+#### 静态资源映射的性能技巧
+
+**位置**：[WebMvcConfig.java](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/common/config/WebMvcConfig.java)
+
+**学习点**：
+- 使用 @Configuration + WebMvcConfigurer 而非 @Controller 处理静态文件
+- 原因：WebMvcConfigurer 配置的静态资源由 ResourceHttpRequestHandler 直接处理，不进入 DispatcherServlet 的控制器扫描链，性能最优
+- `file:` 前缀告诉 Spring 这是文件系统路径，结尾必须带 `/`
+
+#### 编译错误修复：三元表达式优先级陷阱
+
+**位置**：[WebMvcConfig.java#L30](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/common/config/WebMvcConfig.java#L30)
+
+**学习点**：
+- 错误写法 `"file:" + path.endsWith("/") ? path : path + "/"` 会被解析为 `("file:" + boolean) ? path : path + "/"`
+- 因为 `+` 的优先级高于 `?:`，导致 String + boolean 类型不兼容
+- 正确写法：先计算三元表达式，再拼接前缀
+
+```java
+// 错误（编译失败）：
+String location = "file:" + uploadPath.endsWith("/") ? uploadPath : uploadPath + "/";
+
+// 正确（先三元，后拼接）：
+String base = uploadPath.endsWith("/") ? uploadPath : uploadPath + "/";
+String location = "file:" + base;
+```
+
+### 10.3 文件上传流程
+
+```
+前端 multipart/form-data POST /api/v1/file/upload
+  ├─ file: 二进制文件
+  └─ bucket: "avatar" | "exercise" | "food" | "general"
+    │
+    ▼
+FileController.upload()
+    │  从 SecurityContext 取 userId
+    ▼
+FileServiceImpl.upload()
+    │  1. 委托 fileStorageService.store() 落盘
+    │     - 校验文件非空、bucket 白名单、扩展名白名单
+    │     - 生成相对路径：{bucket}/{yyyy/MM/dd}/{uuid}.{ext}
+    │     - 写入磁盘：{upload-path}/{相对路径}
+    │     - 生成 URL：/files/{相对路径}
+    │  2. 写入 file_resource 表
+    │  3. 返回 FileUploadVO {id, fileUrl}
+    ▼
+前端拿到 fileUrl，后续在业务表（如 user_profile.avatar_url）中保存关联
+```
+
+### 10.4 配置说明
+
+**application.yml（公共）**：
+```yaml
+fitpulse:
+  storage:
+    type: local                          # local=本地磁盘降级 / minio=MinIO 对象存储
+    upload-path: D:/FitPulseData/files   # 本地存储根路径
+```
+
+**个人版使用方式**：
+- 无需安装 MinIO
+- 在本地创建 `D:/FitPulseData/files/` 目录（或修改 upload-path）
+- 文件通过 `http://localhost:8080/files/{bucket}/yyyy/MM/dd/xxx.jpg` 直接访问
+
+### 10.5 编译验证
+
+- `mvn compile` 通过（exit code 0）
+- 首次编译失败：WebMvcConfig 第30行三元表达式优先级陷阱 → 修正后通过
+
+### 10.6 git 提交
+
+P4 合并提交。
+
+---
+
 ## 十、个人中心资料卡视觉重构与体脂率估算实现（2026-08-19）
 
 ### 10.1 重构目标

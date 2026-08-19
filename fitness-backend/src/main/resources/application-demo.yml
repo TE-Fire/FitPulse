@@ -47,6 +47,11 @@ fitpulse:
   jwt:
     secret: <your-jwt-secret-key-at-least-256-bits>
 
+  # ============ 文件存储 ============
+  storage:
+    type: local                          # local=本地磁盘降级 / minio=MinIO 对象存储
+    upload-path: D:/FitPulseData/files   # 本地存储根路径（type=local 时使用）
+
   # ============ MinIO ============
   minio:
     endpoint: http://127.0.0.1:9000
