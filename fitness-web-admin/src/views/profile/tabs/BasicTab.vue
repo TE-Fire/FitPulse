@@ -87,20 +87,25 @@
       <div class="fp-section-body">
         <el-form :model="form" label-position="top" class="fp-form-grid">
           <el-form-item label="身高 (cm)">
-            <el-input-number v-model="form.heightCm" :min="100" :max="250" :precision="1" style="width:100%" />
+            <div class="fp-modern-number">
+              <el-input-number v-model="form.heightCm" :min="100" :max="250" :precision="1" />
+            </div>
           </el-form-item>
           <el-form-item label="体重 (kg)">
-            <el-input-number v-model="form.weightKg" :min="30" :max="200" :precision="1" disabled style="width:100%" />
+            <div class="fp-modern-number">
+              <el-input-number v-model="form.weightKg" :min="30" :max="200" :precision="1" disabled />
+            </div>
           </el-form-item>
           <!-- 体脂率：支持估算 + 手动覆盖 -->
           <el-form-item label="体脂率 (%)" class="fp-form-item--bodyfat">
             <div class="fp-bodyfat-wrap">
-              <el-input-number
-                v-model="form.bodyFatPct"
-                :min="3" :max="60" :precision="1"
-                :placeholder="bodyFatPlaceholder"
-                style="width:100%"
-              />
+              <div class="fp-modern-number" style="flex:1;">
+                <el-input-number
+                  v-model="form.bodyFatPct"
+                  :min="3" :max="60" :precision="1"
+                  :placeholder="bodyFatPlaceholder"
+                />
+              </div>
               <el-button
                 v-if="estimatedBodyFat && form.bodyFatPct !== estimatedBodyFat"
                 size="small"
@@ -125,10 +130,10 @@
 
     <!-- ====== 操作按钮 ====== -->
     <div class="fp-actions">
-      <el-button type="primary" size="large" :loading="saving" @click="onSaveProfile">
+      <el-button type="primary" size="large" :loading="saving" class="fp-btn-modern" @click="onSaveProfile">
         <el-icon><Check /></el-icon>保存资料
       </el-button>
-      <el-button size="large" @click="load">
+      <el-button size="large" class="fp-btn-modern-plain" @click="load">
         <el-icon><Refresh /></el-icon>重置
       </el-button>
     </div>
@@ -151,19 +156,29 @@
             </el-select>
           </el-form-item>
           <el-form-item label="目标体重 (kg)">
-            <el-input-number v-model="form.goal.targetWeight" :min="30" :max="200" :precision="1" style="width:100%" />
+            <div class="fp-modern-number">
+              <el-input-number v-model="form.goal.targetWeight" :min="30" :max="200" :precision="1" />
+            </div>
           </el-form-item>
           <el-form-item label="目标体脂 (%)">
-            <el-input-number v-model="form.goal.targetBodyFat" :min="3" :max="60" :precision="1" style="width:100%" />
+            <div class="fp-modern-number">
+              <el-input-number v-model="form.goal.targetBodyFat" :min="3" :max="60" :precision="1" />
+            </div>
           </el-form-item>
           <el-form-item label="每周训练 (次)">
-            <el-input-number v-model="form.goal.weeklyWorkouts" :min="1" :max="14" style="width:100%" />
+            <div class="fp-modern-number">
+              <el-input-number v-model="form.goal.weeklyWorkouts" :min="1" :max="14" />
+            </div>
           </el-form-item>
           <el-form-item label="每日热量 (kcal)">
-            <el-input-number v-model="form.goal.dailyCalories" :min="1000" :max="5000" :step="50" style="width:100%" />
+            <div class="fp-modern-number">
+              <el-input-number v-model="form.goal.dailyCalories" :min="1000" :max="5000" :step="50" />
+            </div>
           </el-form-item>
           <el-form-item label="每日饮水 (ml)">
-            <el-input-number v-model="form.goal.dailyWaterMl" :min="500" :max="5000" :step="100" style="width:100%" />
+            <div class="fp-modern-number">
+              <el-input-number v-model="form.goal.dailyWaterMl" :min="500" :max="5000" :step="100" />
+            </div>
           </el-form-item>
           <el-form-item label="开始日期">
             <el-date-picker v-model="form.goal.startDate" type="date" value-format="YYYY-MM-DD" disabled style="width:100%" />
@@ -173,7 +188,7 @@
           </el-form-item>
         </el-form>
         <div class="fp-section-footer">
-          <el-button type="primary" :loading="savingGoal" @click="onSaveGoal">
+          <el-button type="primary" :loading="savingGoal" class="fp-btn-modern" @click="onSaveGoal">
             <el-icon><Target /></el-icon>保存目标
           </el-button>
         </div>
@@ -486,6 +501,91 @@ onMounted(load)
   box-shadow: 0 2px 8px -2px rgba(124, 92, 255, 0.5);
 }
 
+/* ========== 现代化数字输入框 (Segmented Control Style) ========== */
+.fp-modern-number {
+  :deep(.el-input-number) {
+    width: 100% !important;
+    --el-input-number-height: 36px;
+  }
+  
+  :deep(.el-input-number__decrease),
+  :deep(.el-input-number__increase) {
+    width: 36px;
+    height: 36px;
+    border-radius: 24px;
+    background: var(--bg-soft);
+    border: none;
+    color: var(--text-soft);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    margin: 2px;
+    
+    &:hover {
+      background: var(--fit-brand);
+      color: #fff;
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px -2px rgba(124, 92, 255, 0.4);
+    }
+    
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+
+  :deep(.el-input-number__decrease) {
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    
+    &:hover { transform: translateY(-50%) scale(1.05); }
+    &:active { transform: translateY(-50%) scale(0.95); }
+  }
+
+  :deep(.el-input-number__increase) {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    
+    &:hover { transform: translateY(-50%) scale(1.05); }
+    &:active { transform: translateY(-50%) scale(0.95); }
+  }
+
+  :deep(.el-input__wrapper) {
+    border-radius: 24px !important;
+    padding: 0 40px !important; /* 为左右按钮留出空间 */
+    background: var(--bg-soft);
+    box-shadow: none !important;
+    border: 1px solid var(--border);
+    transition: all 0.2s ease;
+    
+    &:hover {
+      border-color: var(--fit-brand-light);
+      background: var(--bg-soft-hover);
+    }
+    
+    &.is-focus {
+      border-color: var(--fit-brand) !important;
+      box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.15) !important;
+      background: var(--card);
+    }
+    
+    &.is-disabled {
+      background: var(--card);
+      opacity: 0.7;
+    }
+  }
+
+  :deep(.el-input__inner) {
+    text-align: center !important;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+    height: 34px;
+    line-height: 34px;
+  }
+}
+
 /* ========== 体脂率估算区 ========== */
 .fp-bodyfat-wrap {
   display: flex;
@@ -519,6 +619,46 @@ onMounted(load)
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  margin-top: 8px;
+}
+
+/* 现代化按钮样式 */
+.fp-btn-modern {
+  border-radius: 12px !important;
+  padding: 12px 28px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, #7c5cff, #6a48e6) !important;
+  border: none !important;
+  box-shadow: 0 4px 12px -2px rgba(124, 92, 255, 0.4);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -4px rgba(124, 92, 255, 0.5);
+    background: linear-gradient(135deg, #8b6fff, #7c5cff) !important;
+  }
+  
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px -2px rgba(124, 92, 255, 0.4);
+  }
+}
+
+.fp-btn-modern-plain {
+  border-radius: 12px !important;
+  padding: 12px 24px !important;
+  font-weight: 500 !important;
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-soft) !important;
+  transition: all 0.2s ease !important;
+  
+  &:hover {
+    color: var(--fit-brand) !important;
+    border-color: var(--fit-brand) !important;
+    background: var(--bg-soft) !important;
+  }
 }
 
 /* 响应式：窄屏栅格单列 */
