@@ -226,3 +226,68 @@ ALTER TABLE user_profile
 
 **git 提交**：P1 + 文档同步合并提交。
 
+---
+
+## 七、管理端用户界面开发（2026-08-19）
+
+### 7.1 范围与形态（与用户讨论确认）
+
+- **范围**：个人中心 + 维度看板（本轮实现：训练看板 / 健康看板；个人中心暂占位，下轮 6 Tab）
+- **形态**：Vue3 + Pinia + Element Plus + ECharts + Tailwind，基于现有 `fitness-web-admin` 工程延续
+- **风格**：数据看板风（高信息密度、多卡片网格、维度色固化、ECharts 趋势图）
+- **数据源**：开发期走前端 mock（`USE_MOCK=true`），切换真实后端只需在 `.env` 设 `VITE_USE_MOCK=false`
+- **设计契约依据**：`docs/设计契约.md §4.1` 路由 + `§5` 看板维度色 + `§6.2` 看板响应字段
+
+### 7.2 看板维度色固化（§5）
+
+| 维度 | 强调色 | 用途 |
+|---|---|---|
+| A | 🟣 紫 #8E24AA | 健康：体重 / 体脂 |
+| B | 🔵 蓝 #1E88E5 | 训练：容量 / 组数 / 次数 |
+| C | 🟢 绿 #43A047 | 训练：趋势 / 完成率 / 连续打卡 |
+| Bo | 🟠 橙 #FF6F00 | 健康：热量 / 饮水 |
+
+### 7.3 任务拆分（d1-d11，本轮执行）
+
+| # | 任务 | 状态 | 关键产物 |
+|---|---|---|---|
+| d1 | 主题 CSS 变量 + 深色主题支持 | ✅ | `tailwind.config.js`（darkMode:class + dim 色）、`src/style.scss`（浅/深 CSS 变量 + fp-card/fp-stat/fp-grid/fp-progress）、`src/stores/theme.js`（toggle/set/apply + localStorage 持久化）、`main.js` 启动应用主题、`index.html body.fp-app` |
+| d2 | Mock 层 + api 层 | ✅ | `src/config/index.js`（USE_MOCK 开关）、`src/mock/dashboard.js`（TrainingOverview/HealthOverview 数据，对齐 §6.2 字段）、`src/mock/user.js`（资料+目标 mock）、`src/api/dashboard.js`、`src/api/user.js`（开关切换真/mock） |
+| d3 | 通用组件 | ✅ | `src/utils/echarts.js`（按需注册 Line/Bar/Pie/Tooltip/Legend 等）、`src/components/StatCard.vue`（维度色边条 A/B/C/Bo/muted）、`src/components/ChartLine.vue`（平滑曲线 + 区域填充 + 暗色 tooltip）、`src/components/ChartBar.vue`（渐变柱 + 圆角柱顶） |
+| d4 | Admin Shell + 路由整合 | ✅ | `src/layout/Layout.vue`（侧边栏 + 顶栏 + 内容区 + 主题切换按钮 + 用户下拉退出 + 响应式窄屏折叠）、`src/views/profile/Profile.vue` 占位、删除 `src/views/home/Home.vue`（登录成功占位已被看板取代）、`router/index.js` 嵌套结构：`/` → Layout，children 含 `/dashboard/{training,health}` 与 `/profile`，`/` 重定向到 `/dashboard/training` |
+| d5 | 训练看板 | ✅ | `src/views/dashboard/Training.vue`：B 三卡（容量/组数/次数）+ C 两卡（完成率/连续打卡）+ 辅助两卡（次数/计划数）+ 7 天容量折线（B 维蓝）+ 7 天明细表（含平均单组容量） |
+| d6 | 健康看板 | ✅ | `src/views/dashboard/Health.vue`：A 两卡（体重/体脂）+ B 两卡（热量/饮水）+ 辅助 1 卡（蛋白质）+ 独立饮水进度条卡 + 30 天体重折线（A 维紫）+ 7 天热量柱（B 维橙） |
+| d11 | 浏览器验证 + devlog + git 提交 | ✅ | 浏览器子代理 PASS（见 §7.4） |
+| d7 | [下轮] 个人中心 6 Tab | ⏸️ | 容器 + 基本资料/账号安全/训练统计/健康概览/设置/关于 |
+
+### 7.4 浏览器验证结果（Vite dev @ :5174）
+
+**验证手段**：浏览器子代理 → 在 localStorage 注入 mock token 绕过 auth 守卫 → 访问三个路由 + 主题切换 + 截图。
+
+| 检查项 | 结果 | 证据 |
+|---|---|---|
+| 三页正常渲染 | ✅ | 训练看板、健康看板、个人中心均加载并展示标题与内容（截图已保存） |
+| 主题切换生效 | ✅ | 点击顶栏"切换主题"按钮 → 深色模式生效：背景变深蓝灰、卡片/文字颜色反转、图表区域同步变暗 |
+| 图表显示数据 | ✅ | 健康看板见 30 天体重折线 + 饮水进度条（1450/2000ml）；训练看板指标卡与明细表数值正常 |
+| 控制台错误 | ⚠️ | `net::ERR_ABORTED` 资源加载中断（echarts.js / element-plus CSS / vue.js 等），属 SPA 路由切换取消 in-flight 模块请求的常见现象，不影响功能 |
+
+### 7.5 字段对齐核查（设计契约 §6.2）
+
+**TrainingOverview**（mock 实际返回）：
+- `totalWorkoutsThisWeek / totalVolumeThisWeek / totalSetsThisWeek / totalRepsThisWeek / completionRate7d / streakDays / totalPlans / weeklyVolumeTrend[{date,volume,sets}]` —— 8 字段全对齐
+
+**HealthOverview**（mock 实际返回）：
+- `latestWeight / latestBodyFat / weightTrend30d[{date,value}] / caloriesToday / waterTodayMl / waterGoalMl / proteinTodayG / caloriesLast7d[{date,value}]` —— 8 字段全对齐
+
+### 7.6 后续接入说明
+
+切换真实后端：
+1. 项目根目录新建 `.env` 文件，写入 `VITE_USE_MOCK=false`
+2. 后端实现 `/api/v1/admin/dashboard/training` 与 `/api/v1/admin/dashboard/health` 接口（响应字段名严格对齐 §6.2）
+3. 无需改前端业务代码 —— `api/dashboard.js` 与 `api/user.js` 会自动走真实 axios 请求
+
+### 7.7 git 提交
+
+本轮 d1-d11 完成后统一提交。
+
+

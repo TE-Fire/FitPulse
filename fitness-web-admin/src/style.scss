@@ -1,4 +1,10 @@
-/* FitPulse 全局基础样式 —— 仅保留 auth 链路所需 */
+/* ============================================================
+   FitPulse 全局基础样式
+   - 浅/深主题 CSS 变量（<html class="dark"> 切换深色）
+   - Element Plus 主色对齐品牌紫
+   - auth 链路（登录/注册/找回）
+   - 看板通用样式（fp-card / fp-stat / fp-grid）
+   ============================================================ */
 
 * { box-sizing: border-box; }
 html, body, #app {
@@ -8,19 +14,72 @@ html, body, #app {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
+/* ---------- 主题 CSS 变量 ---------- */
 :root {
+  /* 品牌色 */
   --fit-brand: #7c5cff;
   --fit-brand-2: #22d3ee;
   --fit-accent: #f59e0b;
   --fit-success: #10b981;
-}
 
-/* Element Plus 主色对齐品牌紫（按钮/链接/聚焦等） */
-.fitpulse-color-primary {
+  /* 看板维度色（设计契约 §5） */
+  --dim-A: #8E24AA;   /* 健康 A：体重/体脂 紫 */
+  --dim-B: #1E88E5;   /* 训练 B：容量/组/次 蓝 */
+  --dim-C: #43A047;   /* 训练 C：趋势/完成率 绿 */
+  --dim-Bo: #FF6F00;  /* 健康 B：热量/饮水 橙 */
+
+  /* 表面与文本（浅色） */
+  --bg: #f7f8fb;
+  --bg-soft: #eef1f6;
+  --card: #ffffff;
+  --card-2: #f9fafb;
+  --border: #e5e7eb;
+  --text: #1f2937;
+  --text-soft: #6b7280;
+  --text-muted: #9ca3af;
+  --shadow-card: 0 24px 60px -12px rgba(30, 27, 75, 0.18);
+  --shadow-soft: 0 8px 24px -4px rgba(30, 27, 75, 0.08);
+
+  /* Element Plus 主色对齐品牌紫 */
   --el-color-primary: #7c5cff;
 }
 
-/* 登录/注册页外层 —— 极简清新健康风：浅色渐变背景 */
+html.dark {
+  --bg: #0b1020;
+  --bg-soft: #0f1530;
+  --card: #131a2a;
+  --card-2: #1a2238;
+  --border: #1e293b;
+  --text: #e5e7eb;
+  --text-soft: #cbd5e1;
+  --text-muted: #94a3b8;
+  --shadow-card: 0 24px 60px -12px rgba(0, 0, 0, 0.55);
+  --shadow-soft: 0 8px 24px -4px rgba(0, 0, 0, 0.35);
+
+  --el-color-primary: #8b7bff;
+  --el-bg-color: #131a2a;
+  --el-bg-color-page: #0b1020;
+  --el-text-color-primary: #e5e7eb;
+  --el-text-color-regular: #cbd5e1;
+  --el-border-color: #1e293b;
+  --el-border-color-light: #243149;
+  --el-fill-color: #1a2238;
+  --el-fill-color-blank: #131a2a;
+}
+
+/* 全局背景（看板/admin 链路用 body.fp-app） */
+body.fp-app {
+  background: var(--bg);
+  color: var(--text);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* 兼容旧类名 */
+.fitpulse-color-primary { --el-color-primary: #7c5cff; }
+
+/* ============================================================
+   Auth 链路样式
+   ============================================================ */
 .auth-wrap {
   min-height: 100vh;
   background:
@@ -32,18 +91,124 @@ html, body, #app {
   justify-content: center;
   padding: 24px;
 }
-
-/* 登录卡片：白底 + 细边 + 柔和阴影 + 圆角 */
+html.dark .auth-wrap {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(124, 92, 255, 0.16), transparent 60%),
+    radial-gradient(900px 500px at 110% 110%, rgba(34, 211, 238, 0.12), transparent 60%),
+    linear-gradient(180deg, #0b1020 0%, #0f1530 100%);
+}
 .auth-card {
   width: 100%;
   max-width: 440px;
   border-radius: 20px;
-  background: #ffffff;
-  border: 1px solid #eef0f4;
-  box-shadow: 0 24px 60px -12px rgba(30, 27, 75, 0.18);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
 }
 
-/* 滚动条美化（可选） */
+/* ============================================================
+   看板通用样式
+   ============================================================ */
+
+/* 卡片表面 */
+.fp-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft);
+  padding: 18px 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.fp-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-card); }
+
+/* 响应式网格容器 */
+.fp-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.fp-grid--charts {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+/* 指标卡 */
+.fp-stat {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  overflow: hidden;
+}
+.fp-stat::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--dim-B);
+}
+.fp-stat--A::before { background: var(--dim-A); }
+.fp-stat--B::before { background: var(--dim-B); }
+.fp-stat--C::before { background: var(--dim-C); }
+.fp-stat--Bo::before { background: var(--dim-Bo); }
+.fp-stat--muted::before { background: #9ca3af; }
+
+.fp-stat__label {
+  font-size: 12px;
+  color: var(--text-soft);
+  letter-spacing: 0.02em;
+}
+.fp-stat__value {
+  margin-top: 6px;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.fp-stat__unit {
+  margin-left: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-soft);
+}
+.fp-stat__sub {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* 章节标题 */
+.fp-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-soft);
+  margin: 4px 0 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* 简易进度条 */
+.fp-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  overflow: hidden;
+}
+.fp-progress > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--dim-Bo);
+  transition: width 0.4s ease;
+}
+
+/* 滚动条美化 */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+html.dark ::-webkit-scrollbar-thumb { background: #243149; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #2f3d5c; }

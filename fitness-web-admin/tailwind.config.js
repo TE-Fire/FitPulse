@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     './index.html',
     './src/**/*.{vue,js,ts,jsx,tsx}'
@@ -13,6 +14,13 @@ export default {
           cyan: '#22d3ee',      // 副青
           accent: '#f59e0b',    // 点缀琥珀
           success: '#10b981'    // 成功绿
+        },
+        // 看板维度色（设计契约 §5）
+        dim: {
+          A: '#8E24AA',  // 健康 A：体重/体脂 紫
+          B: '#1E88E5',  // 训练 B：容量/组/次 蓝（健康 B：热量/饮水 用橙）
+          C: '#43A047',  // 训练 C：趋势/完成率 绿
+          Bo: '#FF6F00'  // 健康 B：热量/饮水 橙
         }
       },
       fontFamily: {
