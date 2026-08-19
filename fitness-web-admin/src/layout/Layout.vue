@@ -59,8 +59,12 @@
           <strong>{{ currentTitle }}</strong>
         </div>
         <div class="fp-actions">
-          <button class="fp-icon-btn" title="切换主题" @click="themeStore.toggle()">
-            <el-icon><Moon v-show="!themeStore.isDark" /><Sunny v-show="themeStore.isDark" /></el-icon>
+          <button class="fp-icon-btn" :title="themeTooltip" @click="themeStore.cycle()">
+            <el-icon>
+              <Sunny v-if="themeStore.mode === 'light'" />
+              <Moon v-else-if="themeStore.mode === 'dark'" />
+              <Monitor v-else />
+            </el-icon>
           </button>
           <el-dropdown trigger="click" @command="onUserCommand">
             <div class="fp-user">
@@ -127,6 +131,10 @@ const currentGroup = computed(() => {
 })
 const currentTitle = computed(() => route.meta.title || route.name || '')
 const avatarLetter = computed(() => (userStore.username || 'F').charAt(0).toUpperCase())
+const themeTooltip = computed(() => {
+  const map = { light: '当前：浅色（点击切换到深色）', dark: '当前：深色（点击切换到跟随系统）', auto: '当前：跟随系统（点击切换到浅色）' }
+  return map[themeStore.mode] || '切换主题'
+})
 
 async function onUserCommand(cmd) {
   if (cmd === 'profile') {

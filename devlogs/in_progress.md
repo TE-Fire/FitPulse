@@ -290,4 +290,69 @@ ALTER TABLE user_profile
 
 本轮 d1-d11 完成后统一提交。
 
+---
+
+## 八、个人中心 6 Tab 实现（2026-08-19，d7）
+
+### 8.1 任务拆分（d7.1-d7.5）
+
+| # | 任务 | 状态 | 关键产物 |
+|---|---|---|---|
+| d7.1 | 扩展 mock + api 层 | ✅ | `mock/user.js` 补 weightKg/bodyFatPct/fitnessLevel/phone/theme 字段；新增 `getMyTrainingStats()` / `getMyHealthOverview()` / `uploadAvatar()` 三个 mock；`api/user.js` 新增对应接口，路径 `/user/stats` `/user/overview` `/user/avatar`（对齐 in_progress.md §四 计划） |
+| d7.2 | 主题升级 3 态 | ✅ | `stores/theme.js` 重写：state.mode (light/dark/auto) + getters.resolved/isDark/isAuto + actions.apply/cycle/toggle/set；auto 模式监听 `matchMedia('prefers-color-scheme')` 实时刷新；`Layout.vue` 顶栏按钮改用 `cycle()` + 三图标（Sunny/Moon/Monitor）+ 动态 tooltip |
+| d7.3 | Profile 容器重写 | ✅ | `views/profile/Profile.vue` 重写为 `el-tabs` 容器，6 个 tab-pane 懒加载（首次切换才挂子组件） |
+| d7.4 | 6 个 Tab 子组件 | ✅ | `views/profile/tabs/` 下 6 个文件（详见 §8.2） |
+| d7.5 | 验证 + devlog + git | ✅ | 浏览器子代理 PASS（详见 §8.3） |
+
+### 8.2 6 个 Tab 子组件
+
+| Tab | 文件 | 关键内容 |
+|---|---|---|
+| 基本资料 | `BasicTab.vue` | el-upload custom http-request 头像上传（mock 返回 trae-api URL）；资料表单（昵称/性别/生日/身高/健身等级/简介）；体重/体脂只读（缓存自 body_metric）；训练目标子表单（goalType/targetWeight/targetBodyFat/weeklyWorkouts/dailyCalories/dailyWaterMl/targetDate）独立保存 |
+| 账号安全 | `AccountTab.vue` | username 只读（disabled + tooltip）；email/phone 可改；修改密码弹窗（el-dialog + el-form rules 前端校验：两次密码一致性、长度 6-32） |
+| 训练统计 | `TrainingTab.vue` | 4 主卡（B 累计次数/总容量 + C 当前连续/最长连续）；4 辅助卡（总组数/总次数/平均单组容量/平均单次容量）；6 月容量柱图（ChartBar B 维蓝）；上次训练时间 + 距今天数 |
+| 健康概览 | `HealthTab.vue` | 4 主卡（A 体重+30天变化 / A 体脂+30天变化 / B 今日热量 / B 今日饮水）；独立进度条卡（热量 Bo 橙 + 饮水 B 蓝）；4 辅助卡（蛋白质/睡眠/30天体重变化/30天体脂变化） |
+| 设置 | `SettingsTab.vue` | 3 态主题选择器（卡片式：浅色/深色/跟随系统，含视觉预览块 + 当前态 ✓）；清除缓存按钮（保留 `fitpulse_token/rt/user/theme` 4 个键，其余 localStorage 全清）；实时生效信息卡 |
+| 关于 | `AboutTab.vue` | 应用 Logo（品牌紫渐变 + 心形 SVG）；版本 v1.0.0 + 构建时间；11 个技术栈标签；项目说明；退出登录按钮（调 userStore.logout → 跳登录页） |
+
+### 8.3 浏览器验证结果
+
+| 检查项 | 结果 | 证据 |
+|---|---|---|
+| 基本资料 Tab 字段完整性 | ✅ | 头像 + 昵称 + 性别 + 生日 + 身高 + 体重 + 体脂率 + 健身等级 + 简介 + 训练目标分区全部渲染（截图保存） |
+| 账号安全 Tab 用户名只读 + 修改密码弹窗 | ✅ | username 字段 disabled；点击"修改密码"按钮弹窗正常弹出 |
+| 训练统计 Tab 4 主卡 + 柱图 | ✅ | 6 张统计卡有数值，6 月容量柱图挂载并显示曲线 |
+| 健康概览 Tab 4 主卡 + 2 进度条 | ✅ | 体重/体脂/热量/饮水 4 卡数值正常，热量摄入与饮水进度条渲染 |
+| 设置 Tab 3 主题卡 + 切换 | ✅ | 默认选项高亮；点击浅色/深色卡后整体 UI 颜色立即跟随变化 |
+| 关于 Tab 版本号 + 退出登录按钮 | ✅ | 显示 v1.0.0 + 构建时间 + 退出登录按钮 |
+| 控制台错误 | ⚠️ | `net::ERR_ABORTED` 资源中断（Vite HMR / 路由切换取消，非阻塞）；Vue Router 路由不匹配警告（首次无 token 访问触发 redirect 的过渡警告，登录后无） |
+
+### 8.4 字段对齐核查
+
+**profile mock 扩展字段**（对齐 in_progress.md §2.2 ALTER TABLE 计划）：
+- `weightKg` / `bodyFatPct` / `fitnessLevel` / `theme` —— 全部加入
+
+**新增接口字段**（对齐 in_progress.md §四 API 设计清单 6/7）：
+- `/user/stats` → totalWorkouts / totalVolume / totalSets / totalReps / streakDays / longestStreak / lastWorkoutAt / monthlySummary[]
+- `/user/overview` → latestWeight / latestBodyFat / weightChange30d / bodyFatChange30d / caloriesToday / caloriesGoal / waterTodayMl / waterGoalMl / proteinTodayG / proteinGoalG / sleepHoursLastNight
+
+### 8.5 主题切换兼容性说明
+
+- 旧 `toggle()` 方法保留（light ↔ dark），不破坏原有调用
+- 新增 `cycle()` 方法供顶栏按钮使用（light → dark → auto → light）
+- 新增 `set(mode)` 方法供 SettingsTab 直接选择
+- `auto` 模式通过 `matchMedia` 监听系统主题变化，无需刷新页面即可实时切换
+
+### 8.6 后续接入说明
+
+切换真实后端（在 `.env` 设 `VITE_USE_MOCK=false`）后：
+- 后端需实现 `/api/v1/user/stats` 与 `/api/v1/user/overview` 两个聚合接口（字段对齐 §8.4）
+- 头像上传 `/api/v1/user/avatar` 接口需 multipart/form-data，返回 `{ avatarUrl, uploadedAt }`
+- 主题持久化目前仅前端 localStorage；如需后端持久化，可在 user_profile 表的 `theme` 字段同步
+
+### 8.7 git 提交
+
+本轮 d7.1-d7.5 完成后统一提交。
+
+
 

@@ -32,3 +32,34 @@ export function updateMyGoal(data) {
   if (USE_MOCK) return mock.updateMyGoal(data)
   return request.put('/api/v1/user/goal', data)
 }
+
+/**
+ * 训练统计概览（GET /user/stats）
+ * 累计训练次数 / 总容量 / 总组数 / 总次数 / 当前连续 / 最长连续 / 上次训练 / 月度汇总
+ */
+export function getMyTrainingStats() {
+  if (USE_MOCK) return mock.getMyTrainingStats()
+  return request.get('/api/v1/user/stats')
+}
+
+/**
+ * 健康概览（GET /user/overview）
+ * 最新体重/体脂 + 30 天变化 + 今日热量/饮水/蛋白质 + 昨晚睡眠
+ */
+export function getMyHealthOverview() {
+  if (USE_MOCK) return mock.getMyHealthOverview()
+  return request.get('/api/v1/user/overview')
+}
+
+/**
+ * 头像上传（POST /user/avatar）
+ * multipart/form-data，字段 file；返回 { avatarUrl, uploadedAt }
+ */
+export function uploadAvatar(file) {
+  if (USE_MOCK) return mock.uploadAvatar()
+  const form = new FormData()
+  form.append('file', file)
+  return request.post('/api/v1/user/avatar', form, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
