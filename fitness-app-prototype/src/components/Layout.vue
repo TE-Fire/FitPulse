@@ -1,10 +1,11 @@
 <template>
   <!-- App Shell:Layout 承担页面主区域 + 固定底部 BottomNav 的职责 -->
+  <!-- Layout 内部嵌套 router-view 也加 :key,避免同级 tab 切换时因 diff 丢失响应式 -->
   <div class="layout-shell">
     <main class="layout-main">
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
+      <router-view v-slot="{ Component, route }">
+        <transition name="fade">
+          <component :is="Component" :key="route.fullPath" />
         </transition>
       </router-view>
     </main>

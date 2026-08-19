@@ -19,8 +19,8 @@
       <section class="card hero-card">
         <div class="hero-wrap">
           <label class="hero-avatar" :class="{ 'is-loading': uploading }" for="avatar-file" aria-label="更换头像">
-            <span v-if="!form.avatarUrl">{{ letterAvatar }}</span>
-            <img v-else :src="form.avatarUrl" alt="avatar" />
+            <span v-if="!form.avatarUrl || avatarBroken">{{ letterAvatar }}</span>
+            <img v-else :src="form.avatarUrl" alt="avatar" @error="onAvatarError" />
             <div class="hero-avatar-mask">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
               <span>{{ uploading ? '上传中…' : '更换头像' }}</span>
@@ -213,6 +213,8 @@ const form = reactive({
 })
 /** 初始快照，用于「恢复当前」按钮 */
 let initialSnapshot = null
+// 头像加载失败标记(旧头像或上传后 URL 如果加载失败,回退到字母占位)
+const avatarBroken = ref(false)
 
 const today = new Date().toISOString().slice(0, 10)
 
@@ -285,6 +287,7 @@ function snapshotForm() {
 
 async function load() {
   loading.value = true
+  avatarBroken.value = false
   try {
     // 复用 Layout 已缓存的 profile，缺失再请求
     const root = userStore.profile || await getProfile()
@@ -317,6 +320,11 @@ function setGender(v) {
 function applyEstimatedBodyFat() {
   if (estimatedBodyFat.value != null) form.bodyFatPct = estimatedBodyFat.value
 }
+function onAvatarError(e) {
+  const src = e?.target?.src
+  console.warn('[ProfileEdit.avatar] 头像加载失败,回退字母占位. src=', src)
+  avatarBroken.value = true
+}
 function onAvatarChange(e) {
   const f = e.target.files && e.target.files[0]
   if (!f) return
@@ -326,6 +334,7 @@ function onAvatarChange(e) {
     return
   }
   uploading.value = true
+  avatarBroken.value = false // 新上传的先清除"加载失败"标记
   uploadAvatar(f)
     .then((r) => {
       // 返回 {avatarUrl:string}，也兼容直接返回字符串的情况

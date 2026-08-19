@@ -1,10 +1,14 @@
 <template>
   <!-- App Shell:居中显示一个手机宽(390px)的容器,模拟手机屏 -->
+  <!-- 说明:
+    - transition 不使用 mode="out-in",避免跨层级路由切换时(Layout→独立页如 ProfileEdit)旧组件卸载卡住导致新组件不渲染(用户反馈需手动刷新)
+    - component 绑定 :key=$route.fullPath,强制按完整路径重建组件,即使 Component 同名也不会因 Vue diff 跳过
+  -->
   <div class="app-shell">
     <div class="phone-frame">
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
+      <router-view v-slot="{ Component, route }">
+        <transition name="fade">
+          <component :is="Component" :key="route.fullPath" />
         </transition>
       </router-view>
     </div>

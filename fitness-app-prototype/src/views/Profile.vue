@@ -11,8 +11,8 @@
       <section class="card user-card">
         <div class="user-row">
           <div class="avatar">
-            <span v-if="!profile?.avatarUrl">{{ (profile?.nickname || data.username || 'F').charAt(0).toUpperCase() }}</span>
-            <img v-else :src="profile.avatarUrl" alt="avatar" />
+            <span v-if="!profile?.avatarUrl || avatarBroken">{{ (profile?.nickname || data.username || 'F').charAt(0).toUpperCase() }}</span>
+            <img v-else :src="profile.avatarUrl" alt="avatar" @error="onAvatarError" />
           </div>
           <div class="user-info">
             <p class="nickname">{{ profile?.nickname || data.username }}</p>
@@ -144,17 +144,32 @@ const router = useRouter()
 const userStore = useUserStore()
 const loading = ref(true)
 const data = ref(null) // UserProfileVO 根:{userId,username,email,phone,status,lastLoginAt,createdAt,profile:{...}}
+// 头像加载失败标记(裂图 fallback 到字母):vite 未代理 /files 或 404 → SPA fallback 返回 HTML,img 触发 @error
+const avatarBroken = ref(false)
 
 // 嵌套的 profile 对象:{nickname,avatarUrl,gender,birthday,heightCm,weightKg,bodyFatPct,fitnessLevel,theme,bio}
 const profile = computed(() => data.value?.profile || null)
 
+// 单点归一:后端 gender Integer (0=未知 1=男 2=女),兼容字符串/数字/空值
+//   参见后端 UserProfileVO.Profile.gender:Integer 和 UpdateProfileReq.gender:Integer @Min(0)@Max(2)
 function genderText(g) {
-  return g === 'MALE' ? '男' : g === 'FEMALE' ? '女' : '未设置'
+  const v = Number(g)
+  // Dev 调试:打印原始值,一眼看到后端实际传了什么(避免字符串/数字混用误判)
+  console.debug('[Profile.genderText] g=', g, 'typeof=', typeof g, 'Number(g)=', v)
+  if (Number.isNaN(v)) return '未设置'
+  if (v === 1) return '男'
+  if (v === 2) return '女'
+  return v === 0 ? '未知' : '未设置'
 }
 function formatDate(str) {
   if (!str) return '-'
   // 后端返回的时间字符串含毫秒/时区,截取日期部分(yyyy-MM-dd)
   return String(str).slice(0, 10)
+}
+function onAvatarError(e) {
+  const src = e?.target?.src
+  console.warn('[Profile.avatar] 头像加载失败,回退字母占位. src=', src)
+  avatarBroken.value = true
 }
 
 function editProfile() {
@@ -173,6 +188,7 @@ async function logout() {
 
 async function load() {
   loading.value = true
+  avatarBroken.value = false
   try {
     // 优先复用 Layout onMounted 时 store 已拉到的 profile,避免重复请求
     if (userStore.profile) {
@@ -181,6 +197,16 @@ async function load() {
       data.value = await getProfile()
       userStore.profile = data.value
     }
+    // Dev 调试:直接打印后端返回的完整 VO 与嵌套 profile,方便在控制台一眼看到头像/性别/身高字段的实际值和类型
+    console.info('[Profile.load] GET /user/profile → data=', data.value)
+    console.info('[Profile.load] 嵌套 profile=', profile.value,
+      '  gender(原始)=', profile.value?.gender,
+      '  Number(gender)=', Number(profile.value?.gender),
+      '  avatarUrl=', profile.value?.avatarUrl,
+      '  heightCm=', profile.value?.heightCm)
+  } catch (e) {
+    console.error('[Profile.load] 加载失败:', e)
+    throw e
   } finally {
     loading.value = false
   }

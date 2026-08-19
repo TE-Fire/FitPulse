@@ -17,6 +17,13 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true
+      },
+      // 后端 FileController 以 /files/** 暴露上传资源(头像等),
+      // 前端 avatarUrl 形如 /files/avatars/xxx.jpg,dev 下必须代理到 8080,
+      // 否则会落到 SPA fallback 返回 index.html,导致 img 裂图
+      '/files': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
       }
     }
   },
