@@ -66,7 +66,7 @@
  */
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getMyProfile, updateMyProfile, updateMyPassword } from '@/api/user'
+import { getMyProfile, updateMyAccount, updateMyPassword } from '@/api/user'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -87,7 +87,12 @@ const pwdRules = {
   oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
   newPassword: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, max: 32, message: '密码长度 6-32 位', trigger: 'blur' }
+    { min: 8, max: 64, message: '密码长度 8-64 位', trigger: 'blur' },
+    {
+      pattern: /^(?=.*[A-Za-z])(?=.*\d).{8,}$/,
+      message: '密码需同时包含字母和数字',
+      trigger: 'blur'
+    }
   ],
   confirmPassword: [
     { required: true, message: '请再次输入新密码', trigger: 'blur' },
@@ -127,7 +132,7 @@ async function onSaveAccount() {
   }
   saving.value = true
   try {
-    await updateMyProfile({ email: form.email, phone: form.phone })
+    await updateMyAccount({ email: form.email, phone: form.phone })
     ElMessage.success('账号信息已保存')
   } catch (e) {
     ElMessage.error('保存失败')

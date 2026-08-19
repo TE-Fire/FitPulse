@@ -911,5 +911,54 @@ P5 合并提交。
 - 后端 `UpdateProfileReq.bodyFatPct` 已有 `@DecimalMin("3") @DecimalMax("60")` 范围校验
 - 切换真实后端：`.env` 设 `VITE_USE_MOCK=false` 即可，无需改动前端业务代码
 
+---
+
+## 十一、前端对接真实后端接口（2026-08-19）
+
+### 11.1 背景
+
+前端个人中心各 Tab 之前走 mock 数据，API 路径和响应结构与后端实际实现存在差异。本次将前端全面对齐后端 UserController（P3+P5 已实现的 7 个接口）。
+
+### 11.2 前后端差异修正
+
+#### 路径修正（api/user.js）
+
+| 功能 | 修正前 | 修正后 |
+|---|---|---|
+| 获取资料 | `/user/me` | `/user/profile` |
+| 更新资料 | `/user/me` | `/user/profile` |
+| 修改密码 | `/user/me/password` | `/user/password` |
+| 更新账号 | 不存在 | `/user/account`（新增） |
+| 更新目标 | `/user/goal` | 删除（后端 user_goal 已搁置） |
+
+#### 响应结构修正（mock/user.js）
+
+| VO | 修正内容 |
+|---|---|
+| UserProfileVO | 扁平结构 → 嵌套 `profile` 对象（对齐后端 `Profile` 内部类） |
+| TrainingStatsVO | 8 字段 → 4 字段（`streakDays`→`currentStreak`，`lastWorkoutAt`→`lastWorkoutDate`，移除 `totalSets/totalReps/longestStreak/monthlySummary`） |
+| HealthOverviewVO | 11 字段 → 4 字段（`caloriesToday`→`todayCalories`，`waterTodayMl`→`todayWaterMl`，移除 `weightChange30d/bodyFatChange30d/caloriesGoal/waterGoalMl/proteinTodayG/proteinGoalG/sleepHoursLastNight`） |
+| AvatarUploadVO | 移除 `uploadedAt`（后端只返回 `avatarUrl`） |
+
+### 11.3 组件适配
+
+| 文件 | 变更 |
+|---|---|
+| `BasicTab.vue` | `load()` 解构嵌套 `profile` 对象；`onSaveProfile` payload 移除 `avatarUrl`（后端由 POST `/user/avatar` 内部回写）；移除 `updateMyGoal` 引用和 `savingGoal` 状态；训练目标区改为 disabled 视觉占位（标注"功能开发中"） |
+| `AccountTab.vue` | `onSaveAccount` 改用 `updateMyAccount` 替代 `updateMyProfile`；密码校验规则对齐后端（8-64 位 + 字母数字组合） |
+| `TrainingTab.vue` | 字段名对齐（`streakDays`→`currentStreak`，`lastWorkoutAt`→`lastWorkoutDate`）；移除 `ChartBar` 和月度柱图；移除 `totalSets/totalReps/longestStreak` 相关卡片；简化为 4 主卡 + 上次训练信息 |
+| `HealthTab.vue` | 字段名对齐（`caloriesToday`→`todayCalories`，`waterTodayMl`→`todayWaterMl`）；移除进度条（后端无 goal 字段）；移除蛋白质/睡眠/30 天变化卡片；简化为 4 指标卡 + 数据来源提示 |
+
+### 11.4 环境配置
+
+创建 `.env` 文件：`VITE_USE_MOCK=false`，关闭 mock 走真实后端。Vite proxy `/api` → `http://localhost:8080` 已在 `vite.config.js` 配置。
+
+### 11.5 mock 保留策略
+
+mock/user.js 仍保留并对齐了后端 VO 结构，便于：
+- 后端未启动时前端独立开发
+- 切换 mock 只需删除 `.env` 或设 `VITE_USE_MOCK=true`
+
+
 
 

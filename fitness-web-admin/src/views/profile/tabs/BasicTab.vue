@@ -138,60 +138,49 @@
       </el-button>
     </div>
 
-    <!-- ====== 训练目标 ====== -->
+    <!-- ====== 训练目标（视觉占位，后端 user_goal 尚未开发） ====== -->
     <div class="fp-section fp-section--goal">
       <div class="fp-section-header fp-section-header--C">
         <el-icon><Aim /></el-icon>
         <span>训练目标</span>
+        <span class="fp-section-hint">（功能开发中，暂不可保存）</span>
       </div>
-      <div class="fp-section-body">
-        <el-form :model="form.goal" label-position="top" class="fp-form-grid">
+      <div class="fp-section-body fp-section-body--disabled">
+        <el-form label-position="top" class="fp-form-grid">
           <el-form-item label="目标类型">
-            <el-select v-model="form.goal.goalType" style="width:100%">
-              <el-option :value="1" label="减脂" />
+            <el-select model-value="" disabled style="width:100%">
               <el-option :value="2" label="增肌" />
-              <el-option :value="3" label="塑形" />
-              <el-option :value="4" label="维持健康" />
-              <el-option :value="5" label="力量举" />
             </el-select>
           </el-form-item>
           <el-form-item label="目标体重 (kg)">
             <div class="fp-modern-number">
-              <el-input-number v-model="form.goal.targetWeight" :min="30" :max="200" :precision="1" />
+              <el-input-number :model-value="null" :min="30" :max="200" :precision="1" disabled />
             </div>
           </el-form-item>
           <el-form-item label="目标体脂 (%)">
             <div class="fp-modern-number">
-              <el-input-number v-model="form.goal.targetBodyFat" :min="3" :max="60" :precision="1" />
+              <el-input-number :model-value="null" :min="3" :max="60" :precision="1" disabled />
             </div>
           </el-form-item>
           <el-form-item label="每周训练 (次)">
             <div class="fp-modern-number">
-              <el-input-number v-model="form.goal.weeklyWorkouts" :min="1" :max="14" />
+              <el-input-number :model-value="null" :min="1" :max="14" disabled />
             </div>
           </el-form-item>
           <el-form-item label="每日热量 (kcal)">
             <div class="fp-modern-number">
-              <el-input-number v-model="form.goal.dailyCalories" :min="1000" :max="5000" :step="50" />
+              <el-input-number :model-value="null" :min="1000" :max="5000" :step="50" disabled />
             </div>
           </el-form-item>
           <el-form-item label="每日饮水 (ml)">
             <div class="fp-modern-number">
-              <el-input-number v-model="form.goal.dailyWaterMl" :min="500" :max="5000" :step="100" />
+              <el-input-number :model-value="null" :min="500" :max="5000" :step="100" disabled />
             </div>
           </el-form-item>
-          <el-form-item label="开始日期">
-            <el-date-picker v-model="form.goal.startDate" type="date" value-format="YYYY-MM-DD" disabled style="width:100%" />
-          </el-form-item>
           <el-form-item label="目标日期">
-            <el-date-picker v-model="form.goal.targetDate" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" style="width:100%" />
+            <el-date-picker :model-value="null" type="date" value-format="YYYY-MM-DD" disabled style="width:100%" />
           </el-form-item>
         </el-form>
-        <div class="fp-section-footer">
-          <el-button type="primary" :loading="savingGoal" class="fp-btn-modern" @click="onSaveGoal">
-            <el-icon><Target /></el-icon>保存目标
-          </el-button>
-        </div>
       </div>
     </div>
   </div>
@@ -214,22 +203,16 @@
  */
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getMyProfile, updateMyProfile, updateMyGoal, uploadAvatar } from '@/api/user'
+import { getMyProfile, updateMyProfile, uploadAvatar } from '@/api/user'
 
 const loading = ref(false)
 const saving = ref(false)
-const savingGoal = ref(false)
 const uploading = ref(false)
 
 const form = reactive({
   nickname: '', avatarUrl: '', gender: 0,
   birthday: '', heightCm: 170, weightKg: 0, bodyFatPct: 0,
-  fitnessLevel: 1, bio: '',
-  goal: {
-    goalType: 2, targetWeight: 80, targetBodyFat: 15,
-    weeklyWorkouts: 4, dailyCalories: 2200, dailyWaterMl: 2000,
-    startDate: '', targetDate: ''
-  }
+  fitnessLevel: 1, bio: ''
 })
 
 /* ========== 体脂率估算逻辑 ========== */
@@ -297,7 +280,19 @@ async function load() {
   loading.value = true
   try {
     const data = await getMyProfile()
-    Object.assign(form, data)
+    // 后端返回 UserProfileVO：扁平 user 字段 + 嵌套 profile 对象
+    const p = data.profile || {}
+    Object.assign(form, {
+      nickname: p.nickname ?? '',
+      avatarUrl: p.avatarUrl ?? '',
+      gender: p.gender ?? 0,
+      birthday: p.birthday ?? '',
+      heightCm: p.heightCm ?? 170,
+      weightKg: p.weightKg ?? 0,
+      bodyFatPct: p.bodyFatPct ?? 0,
+      fitnessLevel: p.fitnessLevel ?? 1,
+      bio: p.bio ?? ''
+    })
   } catch (e) {
     ElMessage.error('加载资料失败')
   } finally {
@@ -310,7 +305,7 @@ async function onAvatarUpload(opt) {
   try {
     const res = await uploadAvatar(opt.file)
     form.avatarUrl = res.avatarUrl
-    ElMessage.success('头像上传成功，记得保存资料')
+    ElMessage.success('头像已更新')
   } catch (e) {
     ElMessage.error('头像上传失败')
   } finally {
@@ -321,12 +316,13 @@ async function onAvatarUpload(opt) {
 async function onSaveProfile() {
   saving.value = true
   try {
+    // 后端 UpdateProfileReq 不含 avatarUrl（由 POST /user/avatar 内部回写）
     const payload = {
       nickname: form.nickname,
-      avatarUrl: form.avatarUrl,
       gender: form.gender,
       birthday: form.birthday,
       heightCm: form.heightCm,
+      weightKg: form.weightKg,
       bodyFatPct: form.bodyFatPct,
       fitnessLevel: form.fitnessLevel,
       bio: form.bio
@@ -337,18 +333,6 @@ async function onSaveProfile() {
     ElMessage.error('保存失败')
   } finally {
     saving.value = false
-  }
-}
-
-async function onSaveGoal() {
-  savingGoal.value = true
-  try {
-    await updateMyGoal(form.goal)
-    ElMessage.success('目标已保存')
-  } catch (e) {
-    ElMessage.error('保存失败')
-  } finally {
-    savingGoal.value = false
   }
 }
 
@@ -469,6 +453,7 @@ onMounted(load)
 .fp-section-header--C .el-icon { color: var(--dim-C); }
 .fp-section-hint { font-weight: 400; font-size: 12px; color: var(--text-muted); margin-left: auto; }
 .fp-section-body { padding: 20px 24px; }
+.fp-section-body--disabled { opacity: 0.55; pointer-events: none; }
 .fp-section-footer {
   padding: 12px 24px;
   border-top: 1px solid var(--border);
