@@ -57,19 +57,6 @@ fitpulse:
     header: Authorization
     prefix: "Bearer "
 
-  # ============ 文件存储 ============
-  storage:
-    type: local                # 存储类型：local=本地磁盘降级 / minio=MinIO 对象存储
-    upload-path: D:/FitPulseData/files   # 本地存储根路径（type=local 时使用）
-
-  # ============ MinIO（storage.type=minio 时才生效） ============
-  minio:
-    endpoint: http://127.0.0.1:9000
-    access-key: minioadmin
-    secret-key: minioadmin
-    bucket: fitpulse-assets
-    public-base-url: http://127.0.0.1:9000/fitpulse-assets
-
   # ============ AI 提示词模板 ============
   ai:
     plan-prompt-template: |
