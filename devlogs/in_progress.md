@@ -646,6 +646,111 @@ P4 合并提交。
 
 ---
 
+## 十一、MinIO 存储策略扩展 P4+（2026-08-19 完成）
+
+### 11.1 目标
+
+在 P4 已有本地存储实现的基础上，新增 MinIO 对象存储方案，通过修改 yml 配置即可切换存储策略，**无需修改任何业务代码**。
+
+### 11.2 文件清单
+
+| 文件 | 类型 | 说明 |
+|---|---|---|
+| `pom.xml` | 已存在 | MinIO SDK 8.5.7 已在 P1 阶段引入，无需新增 |
+| `common/config/MinioProperties.java` | 新建 | @ConfigurationProperties(prefix="fitpulse.minio") |
+| `common/config/MinioConfig.java` | 新建 | @ConditionalOnProperty 控制 Bean 装配 + @PostConstruct 自动建桶 |
+| `file/service/impl/LocalFileStorageServiceImpl.java` | 修改 | 加 @ConditionalOnProperty(havingValue="local", matchIfMissing=true) |
+| `file/service/impl/MinioFileStorageServiceImpl.java` | 新建 | MinIO 存储实现 |
+| `application.yml` | 修改 | 完善 minio 配置占位 |
+| `application-demo.yml` / `application-dev.yml` | 已对齐 | minio 段落已在 P4 阶段预置 |
+
+### 11.3 设计模式与编码技巧
+
+#### 条件装配（@ConditionalOnProperty）
+
+**位置**：[LocalFileStorageServiceImpl.java#L32](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/file/service/impl/LocalFileStorageServiceImpl.java#L32) 和 [MinioFileStorageServiceImpl.java](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/file/service/impl/MinioFileStorageServiceImpl.java) 和 [MinioConfig.java](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/common/config/MinioConfig.java)
+
+**学习点**：
+- Spring Boot 的 @ConditionalOnProperty 实现"配置驱动的 Bean 装配"
+- 当 yml 配置 `fitpulse.storage.type=local` 时，LocalFileStorageServiceImpl 生效
+- 当 yml 配置 `fitpulse.storage.type=minio` 时，MinioFileStorageServiceImpl + MinioConfig 生效
+- `matchIfMissing=true` 表示未配置时默认激活 local 实现（个人版开箱即用）
+- 两个实现类互斥，同一时刻只有一个 Bean 被创建，避免冲突
+- FileService 通过接口注入 FileStorageService，Spring 自动装配生效的那个实现
+
+```java
+// 默认激活本地实现：
+@Service
+@ConditionalOnProperty(name = "fitpulse.storage.type", havingValue = "local", matchIfMissing = true)
+public class LocalFileStorageServiceImpl implements FileStorageService { ... }
+
+// 配置 type=minio 时才激活 MinIO 实现：
+@Service
+@ConditionalOnProperty(name = "fitpulse.storage.type", havingValue = "minio")
+public class MinioFileStorageServiceImpl implements FileStorageService { ... }
+
+// 配置 type=minio 时才创建 MinioClient Bean：
+@Configuration
+@ConditionalOnProperty(name = "fitpulse.storage.type", havingValue = "minio")
+public class MinioConfig {
+    @Bean
+    public MinioClient minioClient() { ... }
+}
+```
+
+#### Bucket 自动创建（@PostConstruct 容错设计）
+
+**位置**：[MinioConfig.java#initBucket](file:///d:/FitPulse/fitness-backend/src/main/java/com/fitpulse/app/common/config/MinioConfig.java)
+
+**学习点**：
+- @PostConstruct 在 Bean 初始化完成后立即执行，适合做"启动时检查"
+- 容错设计：首次启动自动建桶，避免运维手动操作
+- 如果 MinIO 服务未启动，启动会失败并给出明确错误日志
+
+#### 策略模式完整闭环
+
+**学习点**：
+- P4 阶段只有"抽象接口 + 一个具体策略（本地）"
+- 本阶段新增"另一个具体策略（MinIO）"，策略模式完整闭环
+- 未来扩展 OSS/COS 只需新增一个实现类 + 一个配置类，不改任何现有代码
+- 这就是"开闭原则"的最佳体现：对扩展开放，对修改关闭
+
+### 11.4 配置切换方式
+
+**切换到本地存储（默认，个人版推荐）**：
+```yaml
+fitpulse:
+  storage:
+    type: local
+    upload-path: D:/FitPulseData/files
+```
+
+**切换到 MinIO 存储（生产环境）**：
+```yaml
+fitpulse:
+  storage:
+    type: minio
+  minio:
+    endpoint: http://127.0.0.1:9000
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket: fitpulse-assets
+    public-base-url: http://127.0.0.1:9000/fitpulse-assets
+```
+
+**未配置 type 时**：默认激活 local 实现（matchIfMissing=true），个人版无需任何配置即可使用。
+
+### 11.5 编译验证
+
+- `mvn compile` 通过（exit code 0）
+- 无新增编译错误
+
+### 11.6 git 提交
+
+P4+ 合并提交。
+
+---
+
 ## 十、个人中心资料卡视觉重构与体脂率估算实现（2026-08-19）
 
 ### 10.1 重构目标
