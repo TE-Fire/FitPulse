@@ -93,7 +93,7 @@
           </el-form-item>
           <el-form-item label="体重 (kg)">
             <div class="fp-modern-number">
-              <el-input-number v-model="form.weightKg" :min="30" :max="200" :precision="1" disabled />
+              <el-input-number v-model="form.weightKg" :min="30" :max="200" :precision="1" />
             </div>
           </el-form-item>
           <!-- 体脂率：支持估算 + 手动覆盖 -->
