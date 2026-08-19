@@ -959,6 +959,91 @@ mock/user.js 仍保留并对齐了后端 VO 结构，便于：
 - 后端未启动时前端独立开发
 - 切换 mock 只需删除 `.env` 或设 `VITE_USE_MOCK=true`
 
+---
 
+## 十二、app-prototype 移动原型切真实后端（auth+user 全链路，其余保留 mock）
+
+> 会话主题：根据 devlog 中后端已实现的 User 接口，将 app-prototype 移动原型从"纯 mock" 升级为"auth+user 走真实后端，其余(dashboard/AI 训练看板/健康看板)保留 mock"的混合模式
+> 起始时间：2026-08-19
+> 状态：完成，已通过构建验证
+> 范围确认(已与用户核对)：仅 app-prototype；auth + user 全切真实后端，其余模块(dashboard/ai)继续走 mock
+
+### 12.1 改造前后对比
+
+| 维度 | 改造前(纯 mock 原型) | 改造后(auth+user 真实后端) |
+|---|---|---|
+| HTTP 客户端 | 无,全部 mockCall(fn) 同步解包 | axios 实例(vite proxy `/api`→8080),与 PC 端同级 |
+| 请求工具 | utils/request.js 仅 mockCall | 默认导出 axios request + 命名导出 mockCall(双轨) |
+| accessToken 键名 | `fitpulse_access_token` (单 token) | `fitpulse_token` / `fitpulse_rt` (双 token,与 PC 端一致) |
+| refreshToken | 未持久化,无续签逻辑 | localStorage 持久化 + 401 拦截器续签 + 等待队列(雪崩防护) |
+| 路由守卫 | 无,直接访问 BottomNav 内页 | beforeEach: requiresAuth 未登录跳 `/login?redirect=xxx`;已登录访问 guestOnly 跳 `/home` |
+| profile 加载 | Profile.vue 调 mock `getMe()`(扁平结构) | Layout.onMounted 自动 `userStore.loadMe()`,Profile.vue 复用 `store.profile` |
+| 登录后跳转 | 固定跳 `/home` | 优先 `route.query.redirect`(白名单路径校验),否则 `/home` |
+| auth 接口 | 走 mock(mockLogin/mockRegister/…) | 全切真实 POST `/api/v1/auth/*` 8 个接口 |
+| user 接口 | `getMe()`(mock,1 个) | 对齐后端 7 个:profile GET/PUT + account PUT + password PUT + avatar POST(multipart) + stats GET + overview GET |
+| UserProfileVO 结构 | 扁平:{userId,username,email,nickname,avatarUrl,gender,heightCm,birthday,goal,registeredAt} | 后端嵌套:{userId,username,email,phone,status,createdAt} + profile:{nickname,avatarUrl,gender,birthday,heightCm,weightKg,bodyFatPct,fitnessLevel,theme,bio} |
+| goal 卡片 | 展示 4 格(目标体重/每周/热量/饮水) | 占位:"目标模块开发中,后续上线 goal 接口再启用"(后端 UserController 尚无 goal) |
+| Home/Health/Ai | mockCall | 保持不变,api/dashboard.js + api/ai.js 仍走 mock(后端 dashboard/ai 未开发) |
+| 401 行为 | 无 | 续签失败时清三键(localStorage)+ alert + location 跳 `/#/login` |
+
+### 12.2 文件改动清单
+
+| # | 文件 | 改动类型 | 说明 |
+|---|---|---|---|
+| 1 | `package.json` + `package-lock.json` | 新增依赖 | `axios` (安装 +24 包) |
+| 2 | `vite.config.js` | 新增 | `server.proxy['/api'] → http://localhost:8080` (无 rewrite,保持 `/api/v1/*` 前缀直通后端) |
+| 3 | `src/utils/request.js` | 整文件重写 | axios 实例(默认导出)+ mockCall 命名导出;Bearer 注入;Result 解包;401 refresh 续签(动态 import 避免循环依赖)+ 等待队列;Network Error 专用报错文案;清凭证跳登录用 location(不引 router 避免循环) |
+| 4 | `src/stores/user.js` | 整文件重写 | 双 token 持久化;旧键`fitpulse_access_token`一次性迁移;login/register/loadMe/refresh/logout 真接口调用;profile 缓存;isLoggedIn getter |
+| 5 | `src/router/index.js` | 新增 | meta.requiresAuth + meta.guestOnly;beforeEach 全局守卫(redirect 白名单) |
+| 6 | `src/components/Layout.vue` | 新增 onMounted | 已登录且 profile 未加载时自动 `userStore.loadMe()`(拉 UserProfileVO 填充 BottomNav 内页共享) |
+| 7 | `src/api/auth.js` | 整文件重写 | 全切真实 8 个 POST 接口:registerSendCode/loginSendCode/register/login/refreshToken/logout/forgotPasswordSendCode/forgotPasswordReset |
+| 8 | `src/api/user.js` | 整文件重写 | 7 个接口路径/方法严格对齐后端:GET profile / PUT profile / PUT account / PUT password / POST avatar(FormData) / GET stats / GET overview |
+| 9 | `src/views/Login.vue` | 两处改动 | 新增 `useRoute`;登录成功后 `route.query.redirect` 优先跳转(白名单路径安全校验) |
+| 10 | `src/views/Profile.vue` | 整文件重写 | profile 字段从扁平改为 `data.profile.xxx` 嵌套;新增体重/体脂/手机可选条目;goal 改为占位;registeredAt→createdAt 格式化;edit/account 改为占位 alert;复用 store.profile 避免重复请求 |
+
+### 12.3 关键设计决策(已事前确认)
+
+1. **双轨并存,切口最小**: 仅改造 auth + user,Home/Health/Ai 的 dashboard + ai 接口保持 mockCall。通过 request.js **同时导出 axios + mockCall** 实现双轨,无需在每个 api 文件中做条件分支。
+2. **旧 token 迁移**: `fitpulse_access_token` → `fitpulse_token` 一次性迁移并删除旧键,避免双键冲突。
+3. **401 续签循环依赖破局**: request.js 中 refresh 续签用 **动态 `import('@/api/auth')`** 延迟调用,避免 api/auth.js ↔ request.js ↔ stores/user.js 的静态初始化循环。
+4. **清凭证跳登录用 location**: request.js 故意不引 vue-router(否则 router → store → request → router 循环),用 `window.location.href = '${base}/#/login'` 直接重载,最安全。
+5. **VO 字段精确映射**: 接口文档 UserProfileVO 的嵌套 profile 字段与 UserController 返回结构逐字对齐,gender `MALE`/`FEMALE`(非数字),birthday `yyyy-MM-dd` 字符串,createdAt 完整时间戳截取 10 位。
+6. **goal 不硬造**: 后端 UserController 尚无 goal 接口,Profile 卡片显示"目标模块开发中"占位,避免假数据误导。
+
+### 12.4 构建验证
+
+```
+npm run build (660 modules transformed)
+✓ built in 30.42s
+
+dist/assets/Profile-zPoBakiG.js   7.22 kB
+dist/assets/Login-DlxWeVPv.js     6.99 kB
+dist/assets/ForgotPassword-d10Et2p3.js 4.50 kB
+dist/assets/index-xB553wYr.js   162.07 kB
+dist/assets/dashboard-CN4H7q15.js  1,035 kB (ECharts,仅 size warning)
+```
+
+警告 2 项(非错误):
+- ECharts chunk >500kB(已知,与本次无关)
+- request.js 动态 import api/auth 但 stores/user.js 静态 import,导致 dynamic import 未 code-split(auth 本就在主 chunk,不影响)
+
+### 12.5 手工联调 Checklist(需要后端 localhost:8080 启动后在浏览器验证)
+
+- [ ] 注册:邮箱 + 密码 + 验证码 → 成功 → 跳登录(发送验证码时控制台 Network `POST /api/v1/auth/register/send-code` 200)
+- [ ] 登录:密码模式 + 验证码模式 → 成功 → `/home`(Network `POST /api/v1/auth/login` 返回双 token)
+- [ ] redirect 验证:手动访问 `/#/profile` → 跳 `/login?redirect=%2Fprofile` → 登录成功自动回 `/profile`
+- [ ] refresh 续签:控制台 DevTools 手动清 `fitpulse_token` 仅保留 `fitpulse_rt` → 切页 → Network `POST /api/v1/auth/refresh` 返回新双 token → 页面正常(不跳登录)
+- [ ] 401 失效:控制台清 fitpulse_token + fitpulse_rt → 切页 → Network 请求 401 → 清三键 + alert + 跳登录
+- [ ] 忘记密码:`/#/forgot-password` → 邮箱 → `send-code` 返回明文验证码 → 填新密码 → reset 成功 → `POST /api/v1/auth/forgot-password/reset` 200 → 跳登录 → 新密码可登录
+- [ ] 个人中心:登录后 Profile 卡片显示真实昵称/头像/邮箱/性别/身高/体重(若有)→ Network `GET /api/v1/user/profile` 200
+- [ ] 退出登录:右下退出 → `POST /api/v1/auth/logout` → 清 localStorage 三键 → 跳登录
+- [ ] 看板保持 mock:Home/Health 训练/健康图表正常渲染(Ai 聊天也正常)→ 无真实请求发出
+
+### 12.6 后续接入事项
+
+- 后端 dashboard 模块实现后,将 `api/dashboard.js` 从 mockCall 改 axios request
+- 后端 AI 教练 API 上线后,`api/ai.js` chat 接口切真实
+- Profile 编辑按钮 + 账号与安全 Tab 子页 + 修改密码 + 头像上传交互(目前均为 alert 占位)需后端接口对齐后逐个完善
+- web-admin PC 端已在第十一章单独完成对接,与 app-prototype 两套独立无冲突
 
 

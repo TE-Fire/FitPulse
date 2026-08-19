@@ -11,42 +11,24 @@
       <section class="card user-card">
         <div class="user-row">
           <div class="avatar">
-            <span v-if="!data.avatarUrl">{{ (data.nickname || data.username || 'F').charAt(0).toUpperCase() }}</span>
-            <img v-else :src="data.avatarUrl" alt="avatar" />
+            <span v-if="!profile?.avatarUrl">{{ (profile?.nickname || data.username || 'F').charAt(0).toUpperCase() }}</span>
+            <img v-else :src="profile.avatarUrl" alt="avatar" />
           </div>
           <div class="user-info">
-            <p class="nickname">{{ data.nickname || data.username }}</p>
+            <p class="nickname">{{ profile?.nickname || data.username }}</p>
             <p class="username">@{{ data.username }}</p>
           </div>
-          <button class="edit-btn">编辑</button>
+          <button class="edit-btn" @click="editProfile">编辑</button>
         </div>
       </section>
 
-      <!-- 目标卡 -->
+      <!-- 目标卡:后端 goal 模块尚未开发,占位提示 -->
       <section class="card goal-card">
         <div class="card-head">
           <span class="card-label">我的目标</span>
-          <span class="goal-type-tag">{{ data.goal?.goalTypeText || '未设置' }}</span>
+          <span class="goal-type-tag">开发中</span>
         </div>
-        <div v-if="data.goal" class="goal-grid">
-          <div class="goal-item">
-            <p class="goal-label">目标体重</p>
-            <p class="goal-value">{{ data.goal.targetWeightKg }}<span class="goal-unit">kg</span></p>
-          </div>
-          <div class="goal-item">
-            <p class="goal-label">每周训练</p>
-            <p class="goal-value">{{ data.goal.weeklyWorkoutDays }}<span class="goal-unit">天</span></p>
-          </div>
-          <div class="goal-item">
-            <p class="goal-label">每日热量</p>
-            <p class="goal-value">{{ data.goal.kcalTarget }}<span class="goal-unit">kcal</span></p>
-          </div>
-          <div class="goal-item">
-            <p class="goal-label">每日饮水</p>
-            <p class="goal-value">{{ data.goal.waterGoalMl }}<span class="goal-unit">ml</span></p>
-          </div>
-        </div>
-        <p v-else class="no-goal">尚未设置训练目标</p>
+        <p class="no-goal">目标设置模块尚未上线,后续完善后可自定义训练/体重/热量/饮水目标</p>
       </section>
 
       <!-- 资料卡 -->
@@ -57,23 +39,35 @@
         <div class="info-list">
           <div class="info-row">
             <span class="info-label">邮箱</span>
-            <span class="info-value">{{ data.email }}</span>
+            <span class="info-value">{{ data.email || '-' }}</span>
+          </div>
+          <div class="info-row" v-if="data.phone">
+            <span class="info-label">手机</span>
+            <span class="info-value">{{ data.phone }}</span>
           </div>
           <div class="info-row">
             <span class="info-label">性别</span>
-            <span class="info-value">{{ genderText(data.gender) }}</span>
+            <span class="info-value">{{ genderText(profile?.gender) }}</span>
           </div>
           <div class="info-row">
             <span class="info-label">身高</span>
-            <span class="info-value">{{ data.heightCm ? data.heightCm + ' cm' : '-' }}</span>
+            <span class="info-value">{{ profile?.heightCm ? profile.heightCm + ' cm' : '-' }}</span>
+          </div>
+          <div class="info-row" v-if="profile?.weightKg != null">
+            <span class="info-label">体重</span>
+            <span class="info-value">{{ profile.weightKg }} kg</span>
+          </div>
+          <div class="info-row" v-if="profile?.bodyFatPct != null">
+            <span class="info-label">体脂率</span>
+            <span class="info-value">{{ profile.bodyFatPct }}%</span>
           </div>
           <div class="info-row">
             <span class="info-label">生日</span>
-            <span class="info-value">{{ data.birthday || '-' }}</span>
+            <span class="info-value">{{ profile?.birthday || '-' }}</span>
           </div>
           <div class="info-row">
             <span class="info-label">注册时间</span>
-            <span class="info-value">{{ data.registeredAt }}</span>
+            <span class="info-value">{{ formatDate(data.createdAt) }}</span>
           </div>
         </div>
       </section>
@@ -116,13 +110,12 @@
               <path d="m9 18 6-6-6-6" />
             </svg>
           </div>
-          <div class="action-row" @click="goAction('goal')">
+          <div class="action-row" @click="goAction('account')">
             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <circle cx="12" cy="12" r="6" />
-              <circle cx="12" cy="12" r="2" />
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+              <path d="m9 12 2 2 4-4" />
             </svg>
-            <span class="action-label">我的目标</span>
+            <span class="action-label">账号与安全</span>
             <svg class="action-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="m9 18 6-6-6-6" />
             </svg>
@@ -142,37 +135,63 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { getMe } from '@/api/user'
+import { getProfile } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
 const userStore = useUserStore()
 const loading = ref(true)
-const data = ref(null)
+const data = ref(null) // UserProfileVO 根:{userId,username,email,phone,status,lastLoginAt,createdAt,profile:{...}}
+
+// 嵌套的 profile 对象:{nickname,avatarUrl,gender,birthday,heightCm,weightKg,bodyFatPct,fitnessLevel,theme,bio}
+const profile = computed(() => data.value?.profile || null)
 
 function genderText(g) {
-  return g === 1 ? '男' : g === 2 ? '女' : '未设置'
+  return g === 'MALE' ? '男' : g === 'FEMALE' ? '女' : '未设置'
+}
+function formatDate(str) {
+  if (!str) return '-'
+  // 后端返回的时间字符串含毫秒/时区,截取日期部分(yyyy-MM-dd)
+  return String(str).slice(0, 10)
+}
+
+function editProfile() {
+  alert('编辑资料功能原型暂未实现,后续将对接 PUT /user/profile')
 }
 
 function goAction(key) {
-  // 原型阶段:子页面未实现,以提示替代
-  alert(`「${key}」子页面原型暂未实现,这是 BottomNav 外的子入口`)
+  const labelMap = { records: '训练记录', body: '身体数据', meals: '饮食记录', account: '账号与安全' }
+  alert(`「${labelMap[key] || key}」子页面原型暂未实现,这是 BottomNav 外的子入口`)
 }
 
-function logout() {
-  userStore.logout()
+async function logout() {
+  await userStore.logout()
   router.replace('/login')
 }
 
-onMounted(async () => {
+async function load() {
+  loading.value = true
   try {
-    data.value = await getMe()
+    // 优先复用 Layout onMounted 时 store 已拉到的 profile,避免重复请求
+    if (userStore.profile) {
+      data.value = userStore.profile
+    } else {
+      data.value = await getProfile()
+      userStore.profile = data.value
+    }
   } finally {
     loading.value = false
   }
-})
+}
+
+watch(
+  () => userStore.profile,
+  (v) => { if (v && !data.value) data.value = v }
+)
+
+onMounted(load)
 </script>
 
 <style scoped>
@@ -277,33 +296,6 @@ onMounted(async () => {
   border-radius: 999px;
   background: rgba(124, 92, 255, 0.1);
   color: #7c5cff;
-}
-.goal-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-.goal-item {
-  background: #f8fafc;
-  padding: 10px 12px;
-  border-radius: 10px;
-}
-.goal-label {
-  font-size: 11px;
-  color: #64748b;
-  margin: 0 0 4px 0;
-}
-.goal-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0;
-}
-.goal-unit {
-  font-size: 11px;
-  font-weight: 500;
-  color: #94a3b8;
-  margin-left: 2px;
 }
 .no-goal {
   font-size: 13px;

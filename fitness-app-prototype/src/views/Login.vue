@@ -161,11 +161,12 @@
 
 <script setup>
 import { ref, reactive, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { login as apiLogin, register as apiRegister, loginSendCode, registerSendCode } from '@/api/auth'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const activeTab = ref('login')
@@ -276,7 +277,10 @@ async function onLogin() {
       ? { email: form.email, type: 1, password: form.password }
       : { email: form.email, type: 2, code: form.code }
     await userStore.login(payload)
-    router.replace('/home')
+    const redirect = route.query.redirect && /^\/(home|health|ai|profile)($|\?|\/)/.test(route.query.redirect)
+      ? route.query.redirect
+      : '/home'
+    router.replace(redirect)
   } catch (e) {
     errors.password = e.message || '登录失败'
   } finally {

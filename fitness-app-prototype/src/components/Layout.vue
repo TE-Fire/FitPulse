@@ -54,7 +54,21 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
+
 // Layout 含 BottomNav,固定底部 4 个 tab(对齐设计契约 4.2 BottomNav 列表)
+// 进入需要登录的 Layout 时,拉取最新 profile 填充 store
+const userStore = useUserStore()
+onMounted(async () => {
+  if (userStore.isLoggedIn && !userStore.profile) {
+    try {
+      await userStore.loadMe()
+    } catch (e) {
+      // 401 会走 request.js 拦截器清凭证跳登录,此处静默即可
+    }
+  }
+})
 </script>
 
 <style scoped>
