@@ -158,7 +158,7 @@ function formatDate(str) {
 }
 
 function editProfile() {
-  alert('编辑资料功能原型暂未实现,后续将对接 PUT /user/profile')
+  router.push('/profile/edit')
 }
 
 function goAction(key) {

@@ -18,7 +18,10 @@ export function getProfile() {
 
 /**
  * 更新基本资料(部分更新,字段传 null = 清空原值,不存在自动 upsert)
- * @param {{nickname?:string|null, avatarUrl?:string|null, gender?:'MALE'|'FEMALE'|null, birthday?:string|null, heightCm?:number|null, weightKg?:number|null, bodyFatPct?:number|null, fitnessLevel?:string|null, theme?:string|null, bio?:string|null}} data
+ * 字段类型严格对齐后端 UpdateProfileReq:
+ *   gender:0|1|2 (Integer,0=未知 1=男 2=女)  fitnessLevel:1|2|3|4|null (Integer)
+ *   theme:Integer|null  heightCm/weightKg/bodyFatPct:Number|null
+ * @param {{nickname?:string|null, avatarUrl?:string|null, gender?:0|1|2|null, birthday?:string|null, heightCm?:number|null, weightKg?:number|null, bodyFatPct?:number|null, fitnessLevel?:1|2|3|4|null, theme?:number|null, bio?:string|null}} data
  */
 export function updateProfile(data) {
   return request.put(`${PREFIX}/profile`, data)

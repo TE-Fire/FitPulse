@@ -7,6 +7,8 @@ const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', name: 'Login', component: () => import('@/views/Login.vue'), meta: { guestOnly: true } },
   { path: '/forgot-password', name: 'ForgotPassword', component: () => import('@/views/ForgotPassword.vue'), meta: { guestOnly: true } },
+  // BottomNav 外的独立编辑页:全屏,含顶部返回按钮,不切底部 tab
+  { path: '/profile/edit', name: 'ProfileEdit', component: () => import('@/views/ProfileEdit.vue'), meta: { requiresAuth: true } },
   {
     path: '/',
     component: () => import('@/components/Layout.vue'),

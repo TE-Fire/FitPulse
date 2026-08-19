@@ -1007,7 +1007,7 @@ mock/user.js 仍保留并对齐了后端 VO 结构，便于：
 2. **旧 token 迁移**: `fitpulse_access_token` → `fitpulse_token` 一次性迁移并删除旧键,避免双键冲突。
 3. **401 续签循环依赖破局**: request.js 中 refresh 续签用 **动态 `import('@/api/auth')`** 延迟调用,避免 api/auth.js ↔ request.js ↔ stores/user.js 的静态初始化循环。
 4. **清凭证跳登录用 location**: request.js 故意不引 vue-router(否则 router → store → request → router 循环),用 `window.location.href = '${base}/#/login'` 直接重载,最安全。
-5. **VO 字段精确映射**: 接口文档 UserProfileVO 的嵌套 profile 字段与 UserController 返回结构逐字对齐,gender `MALE`/`FEMALE`(非数字),birthday `yyyy-MM-dd` 字符串,createdAt 完整时间戳截取 10 位。
+5. **VO 字段精确映射**: 接口文档 UserProfileVO 的嵌套 profile 字段与 UserController 返回结构逐字对齐,**gender 为 Integer(0=未知 1=男 2=女)(见 UserProfileVO.Profile.gender/UpdateProfileReq.gender Integer @Min(0)@Max(2))**,birthday `yyyy-MM-dd` 字符串,createdAt 完整时间戳截取 10 位;fitnessLevel/theme 也是 Integer。
 6. **goal 不硬造**: 后端 UserController 尚无 goal 接口,Profile 卡片显示"目标模块开发中"占位,避免假数据误导。
 
 ### 12.4 构建验证
@@ -1039,11 +1039,94 @@ dist/assets/dashboard-CN4H7q15.js  1,035 kB (ECharts,仅 size warning)
 - [ ] 退出登录:右下退出 → `POST /api/v1/auth/logout` → 清 localStorage 三键 → 跳登录
 - [ ] 看板保持 mock:Home/Health 训练/健康图表正常渲染(Ai 聊天也正常)→ 无真实请求发出
 
-### 12.6 后续接入事项
+### 12.6 修复 Bug + 补充编辑资料功能（独立页）
+
+> 会话主题：用户反馈 2 项问题——(a) 性别已在 user_profile 表落款但 Profile 页始终显示"未设置"；(b) PUT /user/profile + user_profile 所有字段后端已完成，但移动端「编辑」按钮仅有 alert 占位。
+> 修复时间：2026-08-19（紧接 12.1–12.5 之后）
+> 状态：完成，已通过构建验证
+
+#### 12.6.1 Bug 根因（性别显示未设置）
+
+Profile.vue 旧的 `genderText()` 将后端 gender 当作**枚举字符串** `'MALE' | 'FEMALE'` 处理，而实际后端（UserProfileVO.Profile.gender:Integer、UpdateProfileReq.gender:Integer @Min(0)@Max(2)）使用的是**数字枚举** 0=未知 1=男 2=女 → 所有非 'MALE'/'FEMALE' 的值全部命中 "未设置" fallback。
+
+#### 12.6.2 修复方式（单点归一，符合「不要多点散改」）
+
+- [Profile.vue `genderText()`](file:///d:/FitPulse/fitness-app-prototype/src/views/Profile.vue#L151-L159) 统一走 `Number(g)` 归一后再做 `0/1/2` 映射：NaN 空值=未设置；0=未知；1=男；2=女。前端任何地方都通过这一个函数取性别文案。
+- [api/user.js `updateProfile` JSDoc](file:///d:/FitPulse/fitness-app-prototype/src/api/user.js#L19-L28) 修正：gender Integer 0/1/2，fitnessLevel/theme Integer，避免后续表单又传字符串枚举。
+
+#### 12.6.3 编辑资料页实现（ProfileEdit.vue，独立全屏页 /profile/edit）
+
+**选型**：由于移动端原型不引入 Element Plus（保持轻量），表单全部用**纯 Tailwind + 原生 HTML input/select/textarea**实现，复用 PC 端 BasicTab.vue 的字段集合与 BMI 体脂估算公式。
+
+**路由**（[router/index.js](file:///d:/FitPulse/fitness-app-prototype/src/router/index.js#L10-L11)）：
+- 在 Layout/BottomNav 外层新增 `{ path:'/profile/edit', meta:{requiresAuth:true} }`
+- Profile.vue 编辑按钮从 `alert()` 改为 `router.push('/profile/edit')`
+- 返回使用 `router.back()`，保持浏览器栈的"返回"体验
+
+**表单字段清单**（严格对齐后端 UpdateProfileReq）：
+
+| 字段 | UI 控件 | 值域/约束 | 说明 |
+|---|---|---|---|
+| avatarUrl | 圆形头像 + 隐藏 `<input type=file accept=image/*>` | ≤5MB，JPG/PNG | 点击调 `POST /user/avatar`（FormData），成功回写 `form.avatarUrl` |
+| nickname | `<input text>` maxlength=32 + 字数统计 | 32 字内 | 空时允许 null 清空（后端用 nickname 存空串也行） |
+| gender | **3 按钮分段（男 1 / 女 2 / 未知 0）** 纯 Tailwind 胶囊样式 | 0/1/2 Integer | active 态填充品牌紫+阴影，不依赖 el-radio-button |
+| birthday | `<input type=date>` max=今天 | YYYY-MM-DD | LocalDate JSON 序列化为字符串，直接提交 |
+| heightCm | `<input number>` step=0.1 100–250 + cm 后缀装饰 | BigDemical → JSON 数字 | |
+| weightKg | `<input number>` step=0.1 30–200 + kg 后缀装饰 | BigDecimal → JSON 数字 | |
+| bodyFatPct | `<input number>` step=0.1 3–60 + **BMI 估算"填入X.X%"按钮** | BigDecimal → JSON 数字 | 同 PC BasicTab 估算公式：男性 1.2×BMI+0.23×age-16.2；女性 -5.4；按钮点击一键填；行内提示文案"根据身高/体重/性别/年龄估算" + 免责说明 |
+| fitnessLevel | `<select>` 自定义下拉图标（SVG 背景） | 1入门/2进阶/3达人/4专业（Integer，null=暂不选） | 不引 el-select |
+| bio | `<textarea rows=3>` maxlength=200 + 右下角字数 | 200 字内 | |
+| theme | 暂不在 UI 暴露（后端 V2 字段，移动端无多主题功能） | 1浅色 2深色 3跟随（Integer） | 编辑时仅将原值回写到 payload 不破坏 |
+
+**其它关键交互**：
+1. **未保存返回确认**：`onCancel()` 比较 `form` 与初始快照 `initialSnapshot`，有改动时 `confirm()` 防误触丢数据
+2. **前端弱校验**（后端 `@Validated` 是强校验）：昵称 32、简介 200、身高 100–250、体重 30–200、体脂 3–60、健身等级枚举，命中即 alert 阻止提交
+3. **保存链路**：`updateProfile(payload)` → 成功后 `userStore.loadMe()` 强刷 BottomNav 共享缓存 → `router.back()` 返回 Profile 页立即显示新值
+4. **"恢复当前"按钮**：用进入时的快照重置表单，与 PC 端 BasicTab Reset 语义一致
+5. **加载优先复用缓存**：进入编辑页先读 `userStore.profile`，缺失才 `GET /user/profile`，避免不必要请求
+
+#### 12.6.4 本次新增/改动文件（4 个）
+
+| 文件 | 改动类型 | 说明 |
+|---|---|---|
+| `src/views/Profile.vue` | 改 2 处 | genderText 归一；编辑按钮跳 `/profile/edit` |
+| `src/router/index.js` | 加 1 行路由 | `/profile/edit`（BottomNav 外，独立全屏，requiresAuth） |
+| `src/api/user.js` | 仅注释修正 | updateProfile JSDoc：gender Integer 0/1/2；fitnessLevel/theme Integer |
+| `src/views/ProfileEdit.vue` | **新文件**（≈550 行） | 纯 Tailwind+原生表单编辑页：含头像上传 / 性别分段按钮 / BMI 体脂估算 / 保存 / 重置 / 未保存返回确认 |
+
+#### 12.6.5 构建验证（12.4 基础上复跑）
+
+```
+npm run build (662 modules transformed)
+✓ built in 15.14s
+
+dist/assets/ProfileEdit-vWrI1hfC.js     9.93 kB │ gzip: 4.28 kB
+dist/assets/ProfileEdit-uFAGaIwP.css    6.50 kB │ gzip: 1.86 kB
+dist/assets/dashboard-Dbdxtnho.js    1,035.08 kB (同前，ECharts size 警告)
+```
+
+警告 2 项（均与 12.4 一致，无新增错误）。
+
+#### 12.6.6 手工联调追加 Checklist（基于 12.5 补充）
+
+- [ ] 性别显示：登录后 Profile 页「性别」条目根据 user_profile.gender 字段正确显示男（1）/女（2）/未知（0）/未设置（NULL）
+- [ ] 跳转编辑页：Profile 右上「编辑」→ `/profile/edit`，全屏页顶部有返回/保存按钮，无 BottomNav
+- [ ] 头像上传：点击头像 → 选 2MB JPG → Network `POST /api/v1/user/avatar` 200 → 头像预览即时变化，保存后回到 Profile 仍为新头像
+- [ ] 性别分段按钮：点男/女/未知 → active 高亮，保存后回 Profile 页正确显示
+- [ ] BMI 估算：填身高 175 体重 65 性别 男 生日 2003-05-06 → 估算体脂 ≈ 18.2% → 点「填入 18.2%」→ 体脂 input 被写入
+- [ ] 保存：Network `PUT /api/v1/user/profile` 200 → 回到 Profile → 所有刚改字段立即生效
+- [ ] 未保存返回：修改昵称后点返回 → `confirm` 提示；取消保留在编辑页；确认返回 Profile 旧值不变
+- [ ] 恢复当前：乱改一通后点「恢复当前」→ 回到进入编辑页时的初始状态
+
+### 12.7 后续接入事项（修正 12.6 旧版）
 
 - 后端 dashboard 模块实现后,将 `api/dashboard.js` 从 mockCall 改 axios request
 - 后端 AI 教练 API 上线后,`api/ai.js` chat 接口切真实
-- Profile 编辑按钮 + 账号与安全 Tab 子页 + 修改密码 + 头像上传交互(目前均为 alert 占位)需后端接口对齐后逐个完善
+- ~~Profile 编辑按钮 + 头像上传交互(alert 占位)~~ **已在 12.6 完成**（ProfileEdit.vue /profile/edit）
+- 账号与安全 Tab 子页 + 修改密码（PUT /user/password）+ 账号邮箱/手机改绑（PUT /user/account）
 - web-admin PC 端已在第十一章单独完成对接,与 app-prototype 两套独立无冲突
+
+---
+
 
 
