@@ -23,69 +23,98 @@
     <div class="rc-body">
       <!-- ===== 左：基本信息 + 容量预览 ===== -->
       <aside class="rc-sidecard">
-        <div class="rc-card">
-          <h3 class="rc-card__title">基本信息</h3>
-          <el-form :model="form" label-width="80px" label-position="right">
-            <el-form-item label="训练计划">
-              <el-select
-                v-model="form.planId"
-                placeholder="选择训练计划（可选）"
-                clearable
-                filterable
-                style="width: 100%"
-                @change="onPlanChange"
-              >
-                <el-option
-                  v-for="p in planOptions"
-                  :key="p.id"
-                  :label="p.name"
-                  :value="p.id"
+        <div class="rc-card rc-card--featured">
+          <div class="rc-card-accent"></div>
+          <h3 class="rc-card__title rc-card__title--featured">
+            <el-icon><Document /></el-icon>
+            基本信息
+          </h3>
+          <el-form :model="form" label-position="top" class="rc-form">
+            <div class="rc-form-section">
+              <div class="rc-form-section__head">
+                <el-icon class="rc-form-icon"><Files /></el-icon>
+                <span>计划关联</span>
+                <small class="rc-form-section__sub">选择一个计划可自动带入动作</small>
+              </div>
+              <el-form-item label="训练计划">
+                <el-select
+                  v-model="form.planId"
+                  placeholder="选择训练计划（可选）"
+                  clearable
+                  filterable
+                  style="width: 100%"
+                  class="rc-select"
+                  @change="onPlanChange"
                 >
-                  <div class="rc-opt">
-                    <strong>{{ p.name }}</strong>
-                    <span>{{ (p.items || []).length }} 动作</span>
+                  <el-option
+                    v-for="p in planOptions"
+                    :key="p.id"
+                    :label="p.name"
+                    :value="p.id"
+                  >
+                    <div class="rc-opt">
+                      <strong>{{ p.name }}</strong>
+                      <span>{{ (p.items || []).length }} 动作</span>
+                    </div>
+                  </el-option>
+                </el-select>
+                <div v-if="form.planId && currentPlan" class="rc-plan-hint">
+                  <el-icon><InfoFilled /></el-icon>
+                  已选择「{{ currentPlan.name }}」，{{ currentPlan.items?.length }} 个动作已带入下方
+                </div>
+              </el-form-item>
+            </div>
+
+            <div class="rc-form-section">
+              <div class="rc-form-section__head">
+                <el-icon class="rc-form-icon"><Timer /></el-icon>
+                <span>训练时间</span>
+              </div>
+              <div class="rc-form-row rc-form-row--2col">
+                <el-form-item label="训练日期">
+                  <el-date-picker
+                    v-model="form.recordDate"
+                    type="date"
+                    value-format="YYYY-MM-DD"
+                    placeholder="选择训练日期"
+                    style="width: 100%"
+                    class="rc-datepicker"
+                  />
+                </el-form-item>
+                <el-form-item label="训练时长">
+                  <div class="rc-duration">
+                    <el-input-number
+                      v-model="form.durationMin"
+                      :min="0"
+                      :max="600"
+                      size="default"
+                      controls-position="right"
+                      class="rc-inputnumber"
+                    />
+                    <span class="rc-duration__unit">分钟</span>
                   </div>
-                </el-option>
-              </el-select>
-              <div v-if="form.planId && currentPlan" class="rc-plan-hint">
-                <el-icon><InfoFilled /></el-icon>
-                已选择「{{ currentPlan.name }}」，{{ currentPlan.items?.length }} 个动作已带入下方
+                </el-form-item>
               </div>
-            </el-form-item>
+            </div>
 
-            <el-form-item label="训练日期">
-              <el-date-picker
-                v-model="form.recordDate"
-                type="date"
-                value-format="YYYY-MM-DD"
-                placeholder="选择训练日期"
-                style="width: 100%"
-              />
-            </el-form-item>
-
-            <el-form-item label="训练时长">
-              <div class="rc-duration">
-                <el-input-number
-                  v-model="form.durationMin"
-                  :min="0"
-                  :max="600"
-                  size="default"
-                  controls-position="right"
+            <div class="rc-form-section">
+              <div class="rc-form-section__head">
+                <el-icon class="rc-form-icon"><ChatDotRound /></el-icon>
+                <span>训练备注</span>
+                <small class="rc-form-section__sub">记录感受、心得或状态</small>
+              </div>
+              <el-form-item label="训练备注">
+                <el-input
+                  v-model="form.note"
+                  type="textarea"
+                  :rows="3"
+                  placeholder="记录训练状态、身体感受、进步心得…（选填）"
+                  maxlength="400"
+                  show-word-limit
+                  class="rc-textarea"
                 />
-                <span>分钟</span>
-              </div>
-            </el-form-item>
-
-            <el-form-item label="训练备注">
-              <el-input
-                v-model="form.note"
-                type="textarea"
-                :rows="4"
-                placeholder="记录训练状态、身体感受、进步心得…（选填）"
-                maxlength="400"
-                show-word-limit
-              />
-            </el-form-item>
+              </el-form-item>
+            </div>
           </el-form>
         </div>
 
@@ -309,7 +338,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ArrowLeft, Check, Loading, Plus, ArrowUp, ArrowDown, Delete,
-  InfoFilled, Flag
+  InfoFilled, Flag, Document, Files, Timer, ChatDotRound
 } from '@element-plus/icons-vue'
 import {
   createRecord,
@@ -659,6 +688,23 @@ function goBack() { router.push('/training/records') }
   border-radius: 14px;
   padding: 18px 20px;
 }
+
+/* 特色卡片（基本信息） */
+.rc-card--featured {
+  position: relative;
+  overflow: hidden;
+  padding: 20px 22px 22px;
+  border: 1.5px solid rgba(91, 63, 193, 0.2);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+.rc-card-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #5b3fc1, #22d3ee, #131f42);
+}
 .rc-card__title {
   margin: 0 0 14px;
   font-size: 15px;
@@ -668,6 +714,127 @@ function goBack() { router.push('/training/records') }
   border-left: 3px solid #5b3fc1;
   display: inline-flex;
   align-items: center;
+  gap: 8px;
+}
+.rc-card__title--featured {
+  margin: 0 0 18px;
+  padding: 0 0 14px 0;
+  border-left: none;
+  border-bottom: 1px dashed var(--border);
+}
+.rc-card__title--featured svg,
+.rc-card__title--featured .el-icon {
+  color: #5b3fc1;
+}
+
+/* 表单样式 */
+.rc-form :deep(.el-form-item__label) {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-soft);
+  padding-bottom: 6px !important;
+}
+.rc-form-section {
+  margin-bottom: 14px;
+}
+.rc-form-section:last-child {
+  margin-bottom: 0;
+}
+.rc-form-section__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, rgba(91, 63, 193, 0.08), rgba(34, 211, 238, 0.04));
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #5b3fc1;
+}
+.rc-form-section__sub {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.rc-form-icon {
+  font-size: 15px;
+  color: #5b3fc1;
+}
+.rc-form-row {
+  display: flex;
+  gap: 12px;
+}
+.rc-form-row--2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* 选择框样式 */
+.rc-select :deep(.el-select__wrapper) {
+  border-radius: 10px;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  box-shadow: none !important;
+  transition: all 0.2s ease;
+}
+.rc-select :deep(.el-select__wrapper:hover) {
+  border-color: rgba(91, 63, 193, 0.4);
+}
+.rc-select :deep(.el-select__wrapper.is-focused) {
+  border-color: #5b3fc1;
+  box-shadow: 0 0 0 3px rgba(91, 63, 193, 0.12) !important;
+}
+
+/* 日期选择器样式 */
+.rc-datepicker :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  box-shadow: none !important;
+  transition: all 0.2s ease;
+}
+.rc-datepicker :deep(.el-input__wrapper:hover) {
+  border-color: rgba(91, 63, 193, 0.4);
+}
+.rc-datepicker :deep(.el-input__wrapper.is-focus) {
+  border-color: #5b3fc1;
+  box-shadow: 0 0 0 3px rgba(91, 63, 193, 0.12) !important;
+}
+
+/* 数字输入样式 */
+.rc-inputnumber :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  box-shadow: none !important;
+  transition: all 0.2s ease;
+}
+.rc-inputnumber :deep(.el-input__wrapper:hover) {
+  border-color: rgba(91, 63, 193, 0.4);
+}
+.rc-inputnumber :deep(.el-input__wrapper.is-focus) {
+  border-color: #5b3fc1;
+  box-shadow: 0 0 0 3px rgba(91, 63, 193, 0.12) !important;
+}
+
+/* 文本域样式 */
+.rc-textarea :deep(.el-textarea__wrapper) {
+  border-radius: 10px;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  box-shadow: none !important;
+  transition: all 0.2s ease;
+  padding: 10px 14px;
+}
+.rc-textarea :deep(.el-textarea__wrapper:hover) {
+  border-color: rgba(91, 63, 193, 0.4);
+}
+.rc-textarea :deep(.el-textarea__wrapper.is-focus) {
+  border-color: #5b3fc1;
+  box-shadow: 0 0 0 3px rgba(91, 63, 193, 0.12) !important;
 }
 .rc-plan-hint {
   margin-top: 8px;
@@ -684,11 +851,20 @@ function goBack() { router.push('/training/records') }
 }
 
 .rc-duration {
-  display: inline-flex; align-items: center; gap: 8px;
+  display: inline-flex; align-items: center; gap: 10px;
   color: var(--text-muted);
   font-size: 13px;
 }
 .rc-duration .el-input-number { width: 130px; }
+.rc-duration__unit {
+  padding: 6px 12px;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-soft);
+}
 
 .rc-opt {
   display: flex; align-items: center; justify-content: space-between;

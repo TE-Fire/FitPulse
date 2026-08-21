@@ -102,37 +102,51 @@
       <!-- ====== 右侧：已选 & 基本信息 ====== -->
       <section class="pe-main">
         <!-- 基本信息 -->
-        <div class="pe-card">
-          <h3 class="pe-card__title">
+        <div class="pe-card pe-card--featured">
+          <div class="pe-card-accent"></div>
+          <h3 class="pe-card__title pe-card__title--featured">
             <span class="pe-title__num">1</span>
             基本信息
+            <small>定义你的训练计划</small>
           </h3>
           <el-form
             ref="basicFormRef"
             :model="form"
             :rules="basicRules"
-            label-width="84px"
-            label-position="right"
+            label-position="top"
+            class="pe-form"
           >
-            <div class="pe-basic-grid">
-              <el-form-item label="计划名称" prop="name">
-                <el-input
-                  v-model="form.name"
-                  placeholder="如：推日A / 上肢增肌日"
-                  maxlength="50"
-                  show-word-limit
-                />
-              </el-form-item>
-              <el-form-item label="计划描述" prop="description" class="is-col">
-                <el-input
-                  v-model="form.description"
-                  type="textarea"
-                  :rows="2"
-                  maxlength="200"
-                  placeholder="简要说明训练重点与适用场景…（选填）"
-                  show-word-limit
-                />
-              </el-form-item>
+            <div class="pe-form-section">
+              <div class="pe-form-section__head">
+                <el-icon class="pe-form-icon"><EditPen /></el-icon>
+                <span>计划标识</span>
+              </div>
+              <div class="pe-form-section__body">
+                <el-form-item label="计划名称" prop="name" class="pe-form-item--full">
+                  <el-input
+                    v-model="form.name"
+                    placeholder="给这个计划取一个有意义的名字，如：推日A / 上肢增肌日"
+                    maxlength="50"
+                    show-word-limit
+                    class="pe-input"
+                  >
+                    <template #prefix>
+                      <el-icon class="pe-input__icon"><Calendar /></el-icon>
+                    </template>
+                  </el-input>
+                </el-form-item>
+                <el-form-item label="计划描述" prop="description">
+                  <el-input
+                    v-model="form.description"
+                    type="textarea"
+                    :rows="3"
+                    maxlength="200"
+                    placeholder="简要说明训练重点、适用场景、目标肌群等（选填）"
+                    show-word-limit
+                    class="pe-textarea"
+                  />
+                </el-form-item>
+              </div>
             </div>
           </el-form>
         </div>
@@ -266,7 +280,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   ArrowLeft, Check, Loading, Search, Plus, CircleCheckFilled,
-  Files, Rank, ArrowUp, ArrowDown, Delete
+  Files, Rank, ArrowUp, ArrowDown, Delete, EditPen, Calendar
 } from '@element-plus/icons-vue'
 import {
   getPlanDetail,
@@ -463,10 +477,6 @@ onMounted(async () => {
   border: 1px solid var(--border);
   border-radius: 14px;
   margin-bottom: 16px;
-  position: sticky;
-  top: 56px;
-  z-index: 5;
-  backdrop-filter: blur(10px);
 }
 .pe-back {
   display: inline-flex; align-items: center; gap: 5px;
@@ -719,14 +729,99 @@ onMounted(async () => {
 }
 .pe-quick strong { color: #ff8c69; margin-left: 3px; }
 
-.pe-basic-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 4px 18px;
+/* ===== 特色卡片（基本信息） ===== */
+.pe-card--featured {
+  position: relative;
+  overflow: hidden;
+  padding: 20px 24px 24px;
+  border: 1.5px solid rgba(102, 126, 234, 0.25);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
 }
-@media (min-width: 720px) {
-  .pe-basic-grid { grid-template-columns: 1fr 1fr; }
-  .pe-basic-grid .is-col { grid-column: 1 / -1; }
+.pe-card-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+}
+.pe-card__title--featured {
+  margin: 0 0 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed var(--border);
+}
+.pe-card__title--featured small {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+
+/* 表单样式 */
+.pe-form :deep(.el-form-item__label) {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-soft);
+  padding-bottom: 6px !important;
+}
+.pe-form-section {
+  margin-bottom: 16px;
+}
+.pe-form-section__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.05));
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #5a67d8;
+}
+.pe-form-icon {
+  font-size: 16px;
+  color: #667eea;
+}
+.pe-form-section__body {
+  padding: 0 4px;
+}
+
+/* 输入框样式 */
+.pe-input :deep(.el-input__wrapper) {
+  border-radius: 12px;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  box-shadow: none !important;
+  transition: all 0.2s ease;
+}
+.pe-input :deep(.el-input__wrapper:hover) {
+  border-color: rgba(102, 126, 234, 0.4);
+}
+.pe-input :deep(.el-input__wrapper.is-focus) {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12) !important;
+}
+.pe-input__icon {
+  color: #667eea;
+  font-size: 15px;
+}
+
+/* 文本域样式 */
+.pe-textarea :deep(.el-textarea__wrapper) {
+  border-radius: 12px;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  box-shadow: none !important;
+  transition: all 0.2s ease;
+  padding: 12px 14px;
+}
+.pe-textarea :deep(.el-textarea__wrapper:hover) {
+  border-color: rgba(102, 126, 234, 0.4);
+}
+.pe-textarea :deep(.el-textarea__wrapper.is-focus) {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12) !important;
 }
 
 /* ===== 动作编排卡 ===== */
@@ -900,7 +995,6 @@ onMounted(async () => {
     position: static;
     max-height: none;
   }
-  .pe-topbar { top: 56px; }
   .pe-topbar__actions { display: none; }
   .pe-savebar { display: flex; }
 }
