@@ -181,7 +181,7 @@ const MOCK_PLANS = [
     id: '1893456789012345101',
     name: '推日A',
     description: '胸 + 三头 + 前束三角肌（4 动作，推类为主）',
-    status: 1,
+    status: 0,
     itemCount: 4,
     createdAt: '2026-08-10T10:30:00',
     items: [
@@ -195,7 +195,7 @@ const MOCK_PLANS = [
     id: '1893456789012345102',
     name: '拉日A',
     description: '背 + 二头（垂直拉 + 水平拉组合）',
-    status: 1,
+    status: 2,
     itemCount: 3,
     createdAt: '2026-08-12T14:20:00',
     items: [
@@ -208,7 +208,7 @@ const MOCK_PLANS = [
     id: '1893456789012345103',
     name: '腿日A',
     description: '下肢爆发训练（深蹲 + 硬拉双主项）',
-    status: 1,
+    status: 0,
     itemCount: 4,
     createdAt: '2026-08-15T09:00:00',
     items: [
@@ -494,8 +494,120 @@ export async function deletePlan(id) {
   await delay()
   const idx = plansStore.findIndex(x => x.id === id)
   if (idx < 0) throw new Error('PLAN_NOT_FOUND')
+  const plan = plansStore[idx]
+  if (plan.status === 1) throw new Error('PLAN_IN_PROGRESS')
+  if (plan.status === 2) throw new Error('PLAN_COMPLETED_CANNOT_DELETE')
   plansStore.splice(idx, 1)
   return null
+}
+
+// ========== 训练状态流转接口 ==========
+
+export async function startPlan(id) {
+  await delay()
+  const idx = plansStore.findIndex(x => x.id === id)
+  if (idx < 0) throw new Error('PLAN_NOT_FOUND')
+  const plan = plansStore[idx]
+  if (plan.status === 1) throw new Error('PLAN_ALREADY_IN_PROGRESS')
+  if (plan.status === 2) throw new Error('PLAN_ALREADY_COMPLETED')
+  plan.status = 1
+  plan.startedAt = new Date().toISOString().slice(0, 19).replace('T', 'T')
+  return {
+    planId: id,
+    status: 1,
+    statusText: '进行中',
+    startedAt: plan.startedAt
+  }
+}
+
+export async function completePlan(id, payload) {
+  await delay()
+  const idx = plansStore.findIndex(x => x.id === id)
+  if (idx < 0) throw new Error('PLAN_NOT_FOUND')
+  const plan = plansStore[idx]
+  if (plan.status !== 1) throw new Error('PLAN_NOT_IN_PROGRESS')
+
+  const durationSec = payload.durationSec || 0
+  if (durationSec < 300) throw new Error('DURATION_TOO_SHORT')
+  if (!payload.actualSets || payload.actualSets.length === 0) throw new Error('NO_SETS')
+
+  // 生成训练记录
+  const totalVolume = payload.actualSets.reduce((s, x) => s + (Number(x.weightKg) || 0) * (Number(x.reps) || 0), 0)
+  const totalSets = payload.actualSets.length
+  const totalReps = payload.actualSets.reduce((s, x) => s + (Number(x.reps) || 0), 0)
+  const recordId = nextId('r')
+  const today = new Date().toISOString().slice(0, 10)
+
+  const record = {
+    id: recordId,
+    planId: id,
+    planName: plan.name,
+    recordDate: today,
+    durationSec,
+    totalVolume,
+    totalSets,
+    totalReps,
+    note: payload.note || '',
+    sets: payload.actualSets.map((s, i) => ({
+      id: 'rs' + i,
+      exerciseId: s.exerciseId,
+      exerciseName: exercisesStore.find(e => e.id === s.exerciseId)?.name || '',
+      setNo: s.setNo,
+      weightKg: Number(s.weightKg) || 0,
+      reps: Number(s.reps) || 0,
+      rpe: s.rpe || null,
+      restSeconds: s.restSeconds ?? 0
+    }))
+  }
+  recordsStore.unshift(record)
+
+  // 更新计划状态
+  plan.status = 2
+  plan.completedAt = new Date().toISOString().slice(0, 19).replace('T', 'T')
+  delete plan.startedAt
+
+  return {
+    recordId,
+    planId: id,
+    recordDate: today,
+    durationSec,
+    totalVolume,
+    totalSets,
+    totalReps
+  }
+}
+
+export async function cancelPlan(id) {
+  await delay()
+  const idx = plansStore.findIndex(x => x.id === id)
+  if (idx < 0) throw new Error('PLAN_NOT_FOUND')
+  const plan = plansStore[idx]
+  if (plan.status !== 1) throw new Error('PLAN_NOT_IN_PROGRESS')
+  plan.status = 0
+  delete plan.startedAt
+  return {
+    planId: id,
+    status: 0,
+    statusText: '草稿'
+  }
+}
+
+export async function getInProgressPlan() {
+  await delay(150)
+  const plan = plansStore.find(p => p.status === 1)
+  if (!plan) {
+    return { hasActivePlan: false }
+  }
+  const elapsedSec = plan.startedAt
+    ? Math.floor((Date.now() - new Date(plan.startedAt).getTime()) / 1000)
+    : 0
+  return {
+    hasActivePlan: true,
+    planId: plan.id,
+    name: plan.name,
+    startedAt: plan.startedAt,
+    elapsedSec: Math.max(0, elapsedSec)
+  }
 }
 
 // ========== 训练记录接口 ==========
@@ -541,39 +653,7 @@ export async function getRecordDetail(id) {
   }
 }
 
-export async function createRecord(payload) {
-  await delay()
-  if (!payload.sets || payload.sets.length === 0) throw new Error('RECORD_SET_EMPTY')
-  // 容量自动计算
-  const totalVolume = payload.sets.reduce((s, x) => s + (Number(x.weightKg) || 0) * (Number(x.reps) || 0), 0)
-  const totalSets   = payload.sets.length
-  const totalReps   = payload.sets.reduce((s, x) => s + (Number(x.reps) || 0), 0)
-  const id = nextId('r')
-  const planName = payload.planId ? (plansStore.find(p => p.id === payload.planId)?.name || '') : ''
-  const record = {
-    id,
-    planId: payload.planId || null,
-    planName,
-    recordDate: payload.recordDate,
-    durationSec: payload.durationSec || 0,
-    totalVolume,
-    totalSets,
-    totalReps,
-    note: payload.note || '',
-    sets: payload.sets.map((s, i) => ({
-      id: 'rs' + i,
-      exerciseId: s.exerciseId,
-      exerciseName: exercisesStore.find(e => e.id === s.exerciseId)?.name || '',
-      setNo: s.setNo || (i + 1),
-      weightKg: Number(s.weightKg) || 0,
-      reps: Number(s.reps) || 0,
-      rpe: s.rpe || null,
-      restSeconds: s.restSeconds ?? 0
-    }))
-  }
-  recordsStore.unshift(record)
-  return { id }
-}
+// ========== 辅助函数 ==========
 
 // 辅助：获取所有动作（用于计划编辑页的选择器，不分页）
 export async function getAllExercises() {
@@ -581,11 +661,11 @@ export async function getAllExercises() {
   return [...exercisesStore].sort((a, b) => (b.isSystem - a.isSystem) || a.name.localeCompare(b.name, 'zh-Hans'))
 }
 
-// 辅助：获取所有计划（用于记录录入页的下拉选择，不分页）
+// 辅助：获取所有计划（用于训练选择，不分页）
 export async function getAllPlans() {
   await delay(120)
   return plansStore
-    .filter(p => p.status === 1)
-    .map(p => ({ id: p.id, name: p.name, description: p.description, items: p.items || [] }))
+    .filter(p => p.status !== 2)
+    .map(p => ({ id: p.id, name: p.name, description: p.description, status: p.status, items: p.items || [] }))
     .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans'))
 }

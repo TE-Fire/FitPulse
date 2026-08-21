@@ -79,10 +79,16 @@ const routes = [
         meta: { title: '训练记录', group: '训练' }
       },
       {
-        path: 'training/records/new',
-        name: 'RecordCreate',
-        component: () => import('@/views/training/RecordCreate.vue'),
-        meta: { title: '记录训练', group: '训练' }
+        path: 'training/session/:id',
+        name: 'TrainingSession',
+        component: () => import('@/views/training/TrainingSession.vue'),
+        meta: { title: '训练中', group: '训练' }
+      },
+      {
+        path: 'training/session',
+        name: 'TrainingSessionResume',
+        component: () => import('@/views/training/TrainingSession.vue'),
+        meta: { title: '继续训练', group: '训练' }
       },
       // 个人中心
       {

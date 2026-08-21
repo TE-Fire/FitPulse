@@ -6,8 +6,8 @@ import * as mock from '@/mock/training'
  * 当前阶段：强制走前端 Mock（USE_MOCK 开关被忽略，后端接口就绪后再对齐）
  * 接口前缀：/api/v1/training
  *   - exercises/*   动作库
- *   - plans/*       训练计划
- *   - records/*     训练记录
+ *   - plans/*       训练计划（含 start/complete/cancel 状态流转）
+ *   - records/*     训练记录（只读，记录由 plan complete 自动生成）
  */
 
 // —— 后端接口就绪前，训练模块强制走 mock
@@ -75,25 +75,49 @@ export function createPlan(data) {
   return request.post('/api/v1/training/plans', data)
 }
 
-/** PUT /training/plans/{id} —— 修改计划（全量替换 items） */
+/** PUT /training/plans/{id} —— 修改计划（全量替换 items，仅 DRAFT 状态可修改） */
 export function updatePlan(id, data) {
   if (useMock) return mock.updatePlan(id, data)
   return request.put(`/api/v1/training/plans/${id}`, data)
 }
 
-/** DELETE /training/plans/{id} —— 删除计划 */
+/** DELETE /training/plans/{id} —— 删除计划（仅 DRAFT/CANCELLED 可删除） */
 export function deletePlan(id) {
   if (useMock) return mock.deletePlan(id)
   return request.delete(`/api/v1/training/plans/${id}`)
 }
 
-/** 辅助：获取全部计划（用于记录录入页下拉选择，不分页） */
+/** 辅助：获取全部计划（用于训练选择，不分页） */
 export function getAllPlans() {
   if (useMock) return mock.getAllPlans()
   return request.get('/api/v1/training/plans', { params: { size: 500 } }).then(r => r.records || [])
 }
 
-/* ==================== 训练记录 WorkoutRecord ==================== */
+/** POST /training/plans/{id}/start —— 开始训练（DRAFT → IN_PROGRESS） */
+export function startPlan(id) {
+  if (useMock) return mock.startPlan(id)
+  return request.post(`/api/v1/training/plans/${id}/start`)
+}
+
+/** POST /training/plans/{id}/complete —— 结束训练并提交记录（IN_PROGRESS → COMPLETED） */
+export function completePlan(id, data) {
+  if (useMock) return mock.completePlan(id, data)
+  return request.post(`/api/v1/training/plans/${id}/complete`, data)
+}
+
+/** POST /training/plans/{id}/cancel —— 放弃训练（IN_PROGRESS → DRAFT，不生成记录） */
+export function cancelPlan(id) {
+  if (useMock) return mock.cancelPlan(id)
+  return request.post(`/api/v1/training/plans/${id}/cancel`)
+}
+
+/** GET /training/plans/in-progress —— 查询当前进行中的训练（用于页面刷新恢复） */
+export function getInProgressPlan() {
+  if (useMock) return mock.getInProgressPlan()
+  return request.get('/api/v1/training/plans/in-progress')
+}
+
+/* ==================== 训练记录 WorkoutRecord（只读） ==================== */
 
 /** GET /training/records —— 训练记录列表（分页 + 日期范围筛选） */
 export function getRecordList(params) {
@@ -107,15 +131,24 @@ export function getRecordDetail(id) {
   return request.get(`/api/v1/training/records/${id}`)
 }
 
-/** POST /training/records —— 提交训练记录（含 sets，后端自动计算容量） */
-export function createRecord(data) {
-  if (useMock) return mock.createRecord(data)
-  return request.post('/api/v1/training/records', data)
-}
-
 /* ==================== 枚举导出（UI 层复用） ==================== */
 export {
   CATEGORY_OPTIONS,
   DIFFICULTY_OPTIONS,
   EQUIPMENT_OPTIONS
 } from '@/mock/training'
+
+/** 计划状态枚举 */
+export const PLAN_STATUS = {
+  DRAFT: 0,       // 草稿
+  IN_PROGRESS: 1, // 进行中
+  COMPLETED: 2,   // 已完成
+  CANCELLED: 3    // 已取消
+}
+
+export const PLAN_STATUS_TEXT = {
+  0: '草稿',
+  1: '进行中',
+  2: '已完成',
+  3: '已取消'
+}

@@ -35,22 +35,40 @@
             {{ String(plan.itemCount).padStart(2, '0') }}
             <small>动作</small>
           </div>
-          <div class="pl-card__menu" @click.stop>
-            <el-dropdown trigger="click" @command="(c) => onCardCmd(c, plan)">
-              <button class="pl-icon-btn">
-                <el-icon><MoreFilled /></el-icon>
-              </button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="edit">
-                    <el-icon><Edit /></el-icon>编辑计划
-                  </el-dropdown-item>
-                  <el-dropdown-item divided command="delete" class="danger">
-                    <el-icon><Delete /></el-icon>删除计划
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+          <div class="pl-card__status-wrap">
+            <span
+              class="pl-status-tag"
+              :class="statusClass(plan.status)"
+            >{{ statusText(plan.status) }}</span>
+            <div class="pl-card__menu" @click.stop>
+              <el-dropdown trigger="click" @command="(c) => onCardCmd(c, plan)">
+                <button class="pl-icon-btn">
+                  <el-icon><MoreFilled /></el-icon>
+                </button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="edit" :disabled="plan.status !== 0">
+                      <el-icon><Edit /></el-icon>编辑计划
+                    </el-dropdown-item>
+                    <el-dropdown-item
+                      v-if="plan.status === 0"
+                      command="start"
+                    >
+                      <el-icon><VideoPlay /></el-icon>开始训练
+                    </el-dropdown-item>
+                    <el-dropdown-item
+                      v-if="plan.status === 2"
+                      command="restart"
+                    >
+                      <el-icon><RefreshRight /></el-icon>再次训练
+                    </el-dropdown-item>
+                    <el-dropdown-item divided command="delete" class="danger" :disabled="plan.status === 1 || plan.status === 2">
+                      <el-icon><Delete /></el-icon>删除计划
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
           </div>
         </div>
         <div class="pl-card__body">
@@ -65,8 +83,36 @@
             {{ formatDate(plan.createdAt) }}
           </span>
           <div class="pl-card__btns" @click.stop>
+            <button
+              v-if="plan.status === 0"
+              class="pl-chip-btn pl-chip-btn--primary"
+              @click="goTraining(plan.id)"
+            >
+              <el-icon><VideoPlay /></el-icon>
+              <span>开始训练</span>
+            </button>
+            <button
+              v-if="plan.status === 1"
+              class="pl-chip-btn pl-chip-btn--warning"
+              @click="goTraining(plan.id)"
+            >
+              <el-icon><VideoPause /></el-icon>
+              <span>继续训练</span>
+            </button>
+            <button
+              v-if="plan.status === 2"
+              class="pl-chip-btn"
+              @click="goTraining(plan.id)"
+            >
+              <el-icon><RefreshRight /></el-icon>
+              <span>再次训练</span>
+            </button>
             <button class="pl-chip-btn" @click="openDetail(plan)">详情</button>
-            <button class="pl-chip-btn pl-chip-btn--accent" @click="goEdit(plan.id)">编辑</button>
+            <button
+              class="pl-chip-btn pl-chip-btn--accent"
+              :disabled="plan.status !== 0"
+              @click="goEdit(plan.id)"
+            >编辑</button>
           </div>
         </div>
       </div>
