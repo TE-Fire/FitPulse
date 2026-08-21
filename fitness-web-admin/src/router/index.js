@@ -47,6 +47,43 @@ const routes = [
         component: () => import('@/views/dashboard/Health.vue'),
         meta: { title: '健康看板', group: '看板' }
       },
+      // 训练模块
+      {
+        path: 'training/exercises',
+        name: 'ExerciseList',
+        component: () => import('@/views/training/ExerciseList.vue'),
+        meta: { title: '动作库管理', group: '训练' }
+      },
+      {
+        path: 'training/plans',
+        name: 'PlanList',
+        component: () => import('@/views/training/PlanList.vue'),
+        meta: { title: '训练计划', group: '训练' }
+      },
+      {
+        path: 'training/plans/new',
+        name: 'PlanCreate',
+        component: () => import('@/views/training/PlanEdit.vue'),
+        meta: { title: '新建训练计划', group: '训练' }
+      },
+      {
+        path: 'training/plans/:id/edit',
+        name: 'PlanEdit',
+        component: () => import('@/views/training/PlanEdit.vue'),
+        meta: { title: '编辑训练计划', group: '训练' }
+      },
+      {
+        path: 'training/records',
+        name: 'RecordList',
+        component: () => import('@/views/training/RecordList.vue'),
+        meta: { title: '训练记录', group: '训练' }
+      },
+      {
+        path: 'training/records/new',
+        name: 'RecordCreate',
+        component: () => import('@/views/training/RecordCreate.vue'),
+        meta: { title: '记录训练', group: '训练' }
+      },
       // 个人中心
       {
         path: 'profile',

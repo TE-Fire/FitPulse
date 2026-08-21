@@ -25,6 +25,18 @@
           <span>{{ item.label }}</span>
         </router-link>
 
+        <p class="fp-nav__group">训练</p>
+        <router-link
+          v-for="item in navGroups.training"
+          :key="item.path"
+          :to="item.path"
+          class="fp-nav__item"
+          active-class="is-active"
+        >
+          <el-icon><component :is="item.icon" /></el-icon>
+          <span>{{ item.label }}</span>
+        </router-link>
+
         <p class="fp-nav__group">管理</p>
         <router-link
           v-for="item in navGroups.profile"
@@ -110,13 +122,15 @@ const navGroups = {
     { path: '/dashboard/training', label: '训练看板', icon: 'TrendCharts' },
     { path: '/dashboard/health',   label: '健康看板', icon: 'DataLine' }
   ],
+  training: [
+    { path: '/training/exercises', label: '动作库管理', icon: 'Files' },
+    { path: '/training/plans',     label: '训练计划',   icon: 'Calendar' },
+    { path: '/training/records',   label: '训练记录',   icon: 'List' }
+  ],
   profile: [
     { path: '/profile', label: '个人中心', icon: 'User' }
   ],
   coming: [
-    { label: '动作库管理', icon: 'Files',   badge: '待开发' },
-    { label: '训练计划',   icon: 'Calendar', badge: '待开发' },
-    { label: '训练记录',   icon: 'List',     badge: '待开发' },
     { label: '身体数据',   icon: 'Monitor',  badge: '待开发' },
     { label: '饮食管理',   icon: 'Food',     badge: '待开发' },
     { label: '饮水日志',   icon: 'Coffee',   badge: '待开发' },
@@ -126,6 +140,7 @@ const navGroups = {
 
 const currentGroup = computed(() => {
   if (route.path.startsWith('/dashboard')) return '看板'
+  if (route.path.startsWith('/training'))  return '训练'
   if (route.path.startsWith('/profile'))   return '管理'
   return '工作台'
 })
