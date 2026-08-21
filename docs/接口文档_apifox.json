@@ -23,6 +23,10 @@
     {
       "name": "File",
       "description": "文件上传（本地存储降级，个人版无需 MinIO）"
+    },
+    {
+      "name": "Training",
+      "description": "训练模块：动作库管理/训练计划/训练记录"
     }
   ],
   "components": {
@@ -631,6 +635,924 @@
         "example": {
           "id": 1873487291038476300,
           "fileUrl": "/files/avatar/20260819/abc123.jpg"
+        }
+      },
+      "ExerciseVO": {
+        "type": "object",
+        "description": "动作库列表/详情 VO",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "雪花ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "动作名称 1-128"
+          },
+          "category": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [1, 2, 3, 4, 5, 6, 7, 8],
+            "description": "1=胸 2=背 3=肩 4=手臂 5=腿 6=核心 7=有氧 8=全身"
+          },
+          "categoryLabel": {
+            "type": "string",
+            "nullable": true,
+            "description": "中文标签，如\"胸\""
+          },
+          "difficulty": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [1, 2, 3],
+            "description": "1=入门 2=中级 3=高级"
+          },
+          "difficultyLabel": {
+            "type": "string",
+            "nullable": true,
+            "description": "中文标签，如\"中级\""
+          },
+          "equipment": {
+            "type": "string",
+            "nullable": true,
+            "description": "器械"
+          },
+          "muscleGroup": {
+            "type": "string",
+            "nullable": true,
+            "description": "目标肌群"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "动作说明"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "示范图URL"
+          },
+          "isSystem": {
+            "type": "boolean",
+            "description": "true=系统预置 false=自定义"
+          },
+          "isMine": {
+            "type": "boolean",
+            "description": "true=当前用户自建"
+          }
+        }
+      },
+      "ExerciseCreateReq": {
+        "type": "object",
+        "required": ["name", "category", "difficulty"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "动作名称"
+          },
+          "category": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [1, 2, 3, 4, 5, 6, 7, 8],
+            "description": "1=胸 2=背 3=肩 4=手臂 5=腿 6=核心 7=有氧 8=全身"
+          },
+          "difficulty": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [1, 2, 3],
+            "description": "1=入门 2=中级 3=高级"
+          },
+          "equipment": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 64,
+            "description": "器械"
+          },
+          "muscleGroup": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 128,
+            "description": "目标肌群"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "动作说明"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 512,
+            "description": "示范图URL"
+          }
+        }
+      },
+      "ExerciseUpdateReq": {
+        "type": "object",
+        "description": "修改动作（部分更新，所有字段可选）",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "动作名称"
+          },
+          "category": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "enum": [1, 2, 3, 4, 5, 6, 7, 8],
+            "description": "1=胸 2=背 3=肩 4=手臂 5=腿 6=核心 7=有氧 8=全身"
+          },
+          "difficulty": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "enum": [1, 2, 3],
+            "description": "1=入门 2=中级 3=高级"
+          },
+          "equipment": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 64,
+            "description": "器械"
+          },
+          "muscleGroup": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 128,
+            "description": "目标肌群"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "动作说明"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 512,
+            "description": "示范图URL"
+          }
+        }
+      },
+      "PlanExerciseReq": {
+        "type": "object",
+        "description": "计划内嵌动作请求",
+        "required": ["exerciseId", "sortOrder", "targetSets", "targetReps"],
+        "properties": {
+          "exerciseId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "动作 ID"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "description": "排序序号"
+          },
+          "targetSets": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 99,
+            "description": "目标组数"
+          },
+          "targetReps": {
+            "type": "string",
+            "maxLength": 32,
+            "description": "如\"8-12\"/\"力竭\"/\"12,10,8\""
+          },
+          "targetWeightKg": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 999,
+            "description": "目标重量 kg"
+          },
+          "restSec": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 600,
+            "description": "组间休息秒数"
+          }
+        }
+      },
+      "PlanCreateReq": {
+        "type": "object",
+        "required": ["name", "planType", "exercises"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "计划名称"
+          },
+          "planType": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [1, 2, 3],
+            "description": "1=力量 2=有氧 3=混合"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 512,
+            "description": "计划描述"
+          },
+          "estimatedMin": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "minimum": 1,
+            "description": "预估时长（分钟）"
+          },
+          "exercises": {
+            "type": "array",
+            "minItems": 1,
+            "description": "计划内嵌动作列表（至少 1 项）",
+            "items": {
+              "$ref": "#/components/schemas/PlanExerciseReq"
+            }
+          }
+        }
+      },
+      "PlanUpdateReq": {
+        "type": "object",
+        "description": "修改计划（部分更新，仅 DRAFT 状态可改；exercises 仍需 minItems 1）",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "计划名称"
+          },
+          "planType": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "enum": [1, 2, 3],
+            "description": "1=力量 2=有氧 3=混合"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 512,
+            "description": "计划描述"
+          },
+          "estimatedMin": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "minimum": 1,
+            "description": "预估时长（分钟）"
+          },
+          "exercises": {
+            "type": "array",
+            "minItems": 1,
+            "description": "若提供则整体覆盖原动作列表（至少 1 项）",
+            "items": {
+              "$ref": "#/components/schemas/PlanExerciseReq"
+            }
+          }
+        }
+      },
+      "PlanListVO": {
+        "type": "object",
+        "description": "计划列表项",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "计划 ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "计划名称"
+          },
+          "planType": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [1, 2, 3],
+            "description": "1=力量 2=有氧 3=混合"
+          },
+          "planTypeLabel": {
+            "type": "string",
+            "nullable": true,
+            "description": "如\"力量\""
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [0, 1, 2, 3],
+            "description": "0=草稿 1=进行中 2=已完成 3=已放弃"
+          },
+          "statusText": {
+            "type": "string",
+            "nullable": true,
+            "description": "如\"草稿\""
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "计划描述"
+          },
+          "estimatedMin": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "description": "预估时长（分钟）"
+          },
+          "exerciseCount": {
+            "type": "integer",
+            "format": "int32",
+            "description": "动作数量"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "开始训练时间"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "完成训练时间"
+          },
+          "actualDurationSec": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "description": "实际训练时长（秒）"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          }
+        }
+      },
+      "PlanExerciseVO": {
+        "type": "object",
+        "description": "计划详情中的动作项",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "plan_exercise 行 ID"
+          },
+          "planId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "所属计划 ID"
+          },
+          "exerciseId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "动作 ID"
+          },
+          "exerciseName": {
+            "type": "string",
+            "nullable": true,
+            "description": "动作名称（冗余便于展示）"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32",
+            "description": "排序序号"
+          },
+          "targetSets": {
+            "type": "integer",
+            "format": "int32",
+            "description": "目标组数"
+          },
+          "targetReps": {
+            "type": "string",
+            "nullable": true,
+            "description": "如\"8-12\"/\"力竭\"/\"12,10,8\""
+          },
+          "targetWeightKg": {
+            "type": "number",
+            "nullable": true,
+            "description": "目标重量 kg"
+          },
+          "restSec": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "description": "组间休息秒数"
+          }
+        }
+      },
+      "PlanDetailVO": {
+        "type": "object",
+        "description": "计划详情",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "计划 ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "计划名称"
+          },
+          "planType": {
+            "type": "integer",
+            "format": "int32",
+            "description": "1=力量 2=有氧 3=混合"
+          },
+          "planTypeLabel": {
+            "type": "string",
+            "nullable": true,
+            "description": "如\"力量\""
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "description": "0=草稿 1=进行中 2=已完成 3=已放弃"
+          },
+          "statusText": {
+            "type": "string",
+            "nullable": true,
+            "description": "如\"草稿\""
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "计划描述"
+          },
+          "estimatedMin": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "description": "预估时长（分钟）"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "开始训练时间"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "完成训练时间"
+          },
+          "actualDurationSec": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "description": "实际训练时长（秒）"
+          },
+          "exercises": {
+            "type": "array",
+            "description": "计划内嵌动作列表",
+            "items": {
+              "$ref": "#/components/schemas/PlanExerciseVO"
+            }
+          }
+        }
+      },
+      "PlanStartResp": {
+        "type": "object",
+        "description": "开始训练响应",
+        "properties": {
+          "planId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "计划 ID"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [0, 1, 2, 3],
+            "description": "0=草稿 1=进行中 2=已完成 3=已放弃"
+          },
+          "statusText": {
+            "type": "string",
+            "nullable": true,
+            "description": "如\"进行中\""
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "开始训练时间"
+          }
+        }
+      },
+      "ActualSetInput": {
+        "type": "object",
+        "description": "完成训练时提交的每组数据，对齐 workout_set 表",
+        "required": ["exerciseId", "setNo"],
+        "properties": {
+          "exerciseId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "动作 ID"
+          },
+          "setNo": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 127,
+            "description": "组号"
+          },
+          "weightKg": {
+            "type": "number",
+            "nullable": true,
+            "description": "本组重量 kg"
+          },
+          "reps": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "description": "本组次数"
+          },
+          "isCompleted": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "default": 1,
+            "enum": [0, 1],
+            "description": "1=完成 0=未完成"
+          },
+          "isWarmup": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "default": 0,
+            "enum": [0, 1],
+            "description": "1=热身组"
+          },
+          "rpe": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 10,
+            "description": "自感强度 RPE"
+          }
+        }
+      },
+      "PlanCompleteReq": {
+        "type": "object",
+        "required": ["durationSec", "actualSets"],
+        "properties": {
+          "durationSec": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "description": "本次训练时长（秒）"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1024,
+            "description": "训练备注"
+          },
+          "actualSets": {
+            "type": "array",
+            "minItems": 1,
+            "description": "本次训练每组实际数据（至少 1 组）",
+            "items": {
+              "$ref": "#/components/schemas/ActualSetInput"
+            }
+          }
+        }
+      },
+      "PlanCompleteResp": {
+        "type": "object",
+        "description": "完成训练响应",
+        "properties": {
+          "recordId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "训练记录 ID"
+          },
+          "planId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "计划 ID"
+          },
+          "recordDate": {
+            "type": "string",
+            "format": "date",
+            "description": "训练日期 yyyy-MM-dd"
+          },
+          "durationSec": {
+            "type": "integer",
+            "format": "int32",
+            "description": "本次训练时长（秒）"
+          },
+          "totalVolume": {
+            "type": "number",
+            "description": "本次训练总容量 kg"
+          },
+          "totalSets": {
+            "type": "integer",
+            "format": "int32",
+            "description": "本次训练总组数"
+          },
+          "totalReps": {
+            "type": "integer",
+            "format": "int32",
+            "description": "本次训练总次数"
+          }
+        }
+      },
+      "PlanCopyResp": {
+        "type": "object",
+        "description": "复制计划响应",
+        "properties": {
+          "newPlanId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "新计划 ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "新计划名称（默认 \"<原名> 副本\"）"
+          },
+          "planType": {
+            "type": "integer",
+            "format": "int32",
+            "description": "1=力量 2=有氧 3=混合"
+          },
+          "planTypeLabel": {
+            "type": "string",
+            "nullable": true,
+            "description": "如\"力量\""
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "description": "新计划状态（默认 0=草稿）"
+          },
+          "statusText": {
+            "type": "string",
+            "nullable": true,
+            "description": "如\"草稿\""
+          },
+          "exerciseCount": {
+            "type": "integer",
+            "format": "int32",
+            "description": "新计划动作数量"
+          }
+        }
+      },
+      "InProgressVO": {
+        "type": "object",
+        "description": "当前进行中训练",
+        "properties": {
+          "hasActivePlan": {
+            "type": "boolean",
+            "description": "是否有进行中的计划"
+          },
+          "planId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true,
+            "description": "进行中计划 ID"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "description": "计划名称"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "开始训练时间"
+          },
+          "elapsedSec": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "description": "已训练时长（秒）"
+          },
+          "plan": {
+            "nullable": true,
+            "description": "仅 hasActivePlan=true 时返回",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanDetailVO"
+              }
+            ]
+          }
+        }
+      },
+      "RecordListVO": {
+        "type": "object",
+        "description": "训练记录列表项",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "记录 ID"
+          },
+          "planId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true,
+            "description": "关联计划 ID"
+          },
+          "planName": {
+            "type": "string",
+            "nullable": true,
+            "description": "关联计划名称"
+          },
+          "recordDate": {
+            "type": "string",
+            "format": "date",
+            "description": "训练日期 yyyy-MM-dd"
+          },
+          "durationSec": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "description": "训练时长（秒）"
+          },
+          "totalVolume": {
+            "type": "number",
+            "description": "本次训练总容量 kg"
+          },
+          "totalSets": {
+            "type": "integer",
+            "format": "int32",
+            "description": "总组数"
+          },
+          "totalReps": {
+            "type": "integer",
+            "format": "int32",
+            "description": "总次数"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "description": "训练备注"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "记录创建时间"
+          }
+        }
+      },
+      "RecordSetVO": {
+        "type": "object",
+        "description": "记录详情中的组明细",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "workout_set 行 ID"
+          },
+          "exerciseId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "动作 ID"
+          },
+          "exerciseName": {
+            "type": "string",
+            "nullable": true,
+            "description": "动作名称"
+          },
+          "setNo": {
+            "type": "integer",
+            "format": "int32",
+            "description": "组号"
+          },
+          "weightKg": {
+            "type": "number",
+            "nullable": true,
+            "description": "本组重量 kg"
+          },
+          "reps": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "description": "本组次数"
+          },
+          "isCompleted": {
+            "type": "boolean",
+            "description": "是否完成"
+          },
+          "isWarmup": {
+            "type": "boolean",
+            "description": "是否热身组"
+          },
+          "rpe": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "description": "自感强度 RPE"
+          }
+        }
+      },
+      "RecordDetailVO": {
+        "type": "object",
+        "description": "训练记录详情",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "记录 ID"
+          },
+          "planId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true,
+            "description": "关联计划 ID"
+          },
+          "planName": {
+            "type": "string",
+            "nullable": true,
+            "description": "关联计划名称"
+          },
+          "recordDate": {
+            "type": "string",
+            "format": "date",
+            "description": "训练日期 yyyy-MM-dd"
+          },
+          "durationSec": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "description": "训练时长（秒）"
+          },
+          "totalVolume": {
+            "type": "number",
+            "description": "本次训练总容量 kg"
+          },
+          "totalSets": {
+            "type": "integer",
+            "format": "int32",
+            "description": "总组数"
+          },
+          "totalReps": {
+            "type": "integer",
+            "format": "int32",
+            "description": "总次数"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "description": "训练备注"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "记录创建时间"
+          },
+          "sets": {
+            "type": "array",
+            "description": "本次训练每组明细",
+            "items": {
+              "$ref": "#/components/schemas/RecordSetVO"
+            }
+          }
+        }
+      },
+      "PageResult": {
+        "type": "object",
+        "description": "通用分页结构（list 元素类型由具体接口决定）",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "format": "int64",
+            "description": "总记录数"
+          },
+          "pageNum": {
+            "type": "integer",
+            "format": "int32",
+            "description": "当前页码"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32",
+            "description": "每页大小"
+          },
+          "pages": {
+            "type": "integer",
+            "format": "int32",
+            "description": "总页数"
+          },
+          "list": {
+            "type": "array",
+            "description": "当前页数据",
+            "items": {}
+          }
         }
       }
     }
@@ -1346,6 +2268,960 @@
                       "properties": {
                         "data": {
                           "$ref": "#/components/schemas/FileUploadVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/training/exercises": {
+      "get": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "动作库分页查询（系统预置 + 当前用户自建）",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageNum",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "description": "动作名称模糊匹配"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true,
+              "enum": [1, 2, 3, 4, 5, 6, 7, 8]
+            },
+            "description": "1=胸 2=背 3=肩 4=手臂 5=腿 6=核心 7=有氧 8=全身"
+          },
+          {
+            "name": "difficulty",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true,
+              "enum": [1, 2, 3]
+            },
+            "description": "1=入门 2=中级 3=高级"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "动作库分页结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/PageResult"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "list": {
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/components/schemas/ExerciseVO"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "新增自定义动作",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExerciseCreateReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "新建后的动作 VO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ExerciseVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/training/exercises/{id}": {
+      "get": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "动作详情",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "动作 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "动作详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ExerciseVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "修改动作（部分更新）",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "动作 ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExerciseUpdateReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新后的动作 VO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ExerciseVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "删除动作（系统预置动作拒绝删除，返回 409）",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "动作 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功(data=null)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                },
+                "example": {
+                  "code": 200,
+                  "message": "操作成功",
+                  "data": null,
+                  "timestamp": 1755410000000
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/training/plans": {
+      "get": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "训练计划列表分页查询",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageNum",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10,
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "计划分页结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/PageResult"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "list": {
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/components/schemas/PlanListVO"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "新建训练计划（含动作列表）",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanCreateReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "新建后的计划详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PlanDetailVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/training/plans/{id}": {
+      "get": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "计划详情",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "计划 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "计划详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PlanDetailVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "修改计划（仅 DRAFT 状态可改，部分更新）",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "计划 ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanUpdateReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新后的计划详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PlanDetailVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "删除计划",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "计划 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功(data=null)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                },
+                "example": {
+                  "code": 200,
+                  "message": "操作成功",
+                  "data": null,
+                  "timestamp": 1755410000000
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/training/plans/{id}/start": {
+      "post": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "开始训练（计划状态 DRAFT→IN_PROGRESS）",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "计划 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "开始训练响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PlanStartResp"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/training/plans/{id}/complete": {
+      "post": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "完成训练（计划状态 IN_PROGRESS→COMPLETED，生成 workout_record）",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "计划 ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanCompleteReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "完成训练响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PlanCompleteResp"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/training/plans/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "放弃训练（计划状态 IN_PROGRESS→ABANDONED）",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "计划 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功(data=null)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                },
+                "example": {
+                  "code": 200,
+                  "message": "操作成功",
+                  "data": null,
+                  "timestamp": 1755410000000
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/training/plans/{id}/copy": {
+      "post": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "复制计划（生成新草稿，含原动作列表）",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "源计划 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "复制计划响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PlanCopyResp"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/training/plans/in-progress": {
+      "get": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "当前进行中训练（hasActivePlan=false 时仅返回该字段）",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "当前进行中训练",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/InProgressVO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/training/records": {
+      "get": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "训练记录分页查询（按时间倒序）",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageNum",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "nullable": true
+            },
+            "description": "起始日期 yyyy-MM-dd（含）"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "nullable": true
+            },
+            "description": "结束日期 yyyy-MM-dd（含）"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "训练记录分页结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/PageResult"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "list": {
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/components/schemas/RecordListVO"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/training/records/{id}": {
+      "get": {
+        "tags": [
+          "Training"
+        ],
+        "summary": "训练记录详情（含每组明细）",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "训练记录 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "训练记录详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Result"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/RecordDetailVO"
                         }
                       }
                     }
