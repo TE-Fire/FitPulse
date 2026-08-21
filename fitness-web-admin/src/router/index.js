@@ -61,34 +61,10 @@ const routes = [
         meta: { title: '训练计划', group: '训练' }
       },
       {
-        path: 'training/plans/new',
-        name: 'PlanCreate',
-        component: () => import('@/views/training/PlanEdit.vue'),
-        meta: { title: '新建训练计划', group: '训练' }
-      },
-      {
-        path: 'training/plans/:id/edit',
-        name: 'PlanEdit',
-        component: () => import('@/views/training/PlanEdit.vue'),
-        meta: { title: '编辑训练计划', group: '训练' }
-      },
-      {
         path: 'training/records',
         name: 'RecordList',
         component: () => import('@/views/training/RecordList.vue'),
         meta: { title: '训练记录', group: '训练' }
-      },
-      {
-        path: 'training/session/:id',
-        name: 'TrainingSession',
-        component: () => import('@/views/training/TrainingSession.vue'),
-        meta: { title: '训练中', group: '训练' }
-      },
-      {
-        path: 'training/session',
-        name: 'TrainingSessionResume',
-        component: () => import('@/views/training/TrainingSession.vue'),
-        meta: { title: '继续训练', group: '训练' }
       },
       // 个人中心
       {

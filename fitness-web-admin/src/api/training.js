@@ -87,35 +87,17 @@ export function deletePlan(id) {
   return request.delete(`/api/v1/training/plans/${id}`)
 }
 
-/** 辅助：获取全部计划（用于训练选择，不分页） */
+/** 辅助：获取全部计划（不分页，用于下拉筛选等） */
 export function getAllPlans() {
   if (useMock) return mock.getAllPlans()
   return request.get('/api/v1/training/plans', { params: { size: 500 } }).then(r => r.records || [])
 }
 
-/** POST /training/plans/{id}/start —— 开始训练（DRAFT → IN_PROGRESS） */
-export function startPlan(id) {
-  if (useMock) return mock.startPlan(id)
-  return request.post(`/api/v1/training/plans/${id}/start`)
-}
-
-/** POST /training/plans/{id}/complete —— 结束训练并提交记录（IN_PROGRESS → COMPLETED） */
-export function completePlan(id, data) {
-  if (useMock) return mock.completePlan(id, data)
-  return request.post(`/api/v1/training/plans/${id}/complete`, data)
-}
-
-/** POST /training/plans/{id}/cancel —— 放弃训练（IN_PROGRESS → DRAFT，不生成记录） */
-export function cancelPlan(id) {
-  if (useMock) return mock.cancelPlan(id)
-  return request.post(`/api/v1/training/plans/${id}/cancel`)
-}
-
-/** GET /training/plans/in-progress —— 查询当前进行中的训练（用于页面刷新恢复） */
-export function getInProgressPlan() {
-  if (useMock) return mock.getInProgressPlan()
-  return request.get('/api/v1/training/plans/in-progress')
-}
+/**
+ * 训练状态流转接口（start/complete/cancel/in-progress）
+ * 仅移动端使用，管理端（admin）不调用
+ * 如需调用，直接引入 mock 对应实现或自行添加
+ */
 
 /* ==================== 训练记录 WorkoutRecord（只读） ==================== */
 
@@ -135,7 +117,9 @@ export function getRecordDetail(id) {
 export {
   CATEGORY_OPTIONS,
   DIFFICULTY_OPTIONS,
-  EQUIPMENT_OPTIONS
+  EQUIPMENT_OPTIONS,
+  PLAN_TYPE_OPTIONS,
+  MOCK_USER_OPTIONS
 } from '@/mock/training'
 
 /** 计划状态枚举 */

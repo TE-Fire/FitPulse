@@ -6,7 +6,7 @@
       <div class="rc-hero__content">
         <div>
           <h2>训练记录</h2>
-          <p>记录每一次挥汗 · 见证持续进步 · 科学量化训练成果</p>
+          <p>移动端同步的训练数据 · 辅助用户量化训练成果</p>
         </div>
         <div class="rc-hero__stats">
           <div class="rc-stat">
@@ -21,12 +21,6 @@
             <div class="rc-stat__num rc-stat__num--cyan">{{ totalReps }}</div>
             <div class="rc-stat__label">完成次数</div>
           </div>
-        </div>
-        <div class="rc-hero__actions">
-          <router-link class="rc-btn rc-btn--primary" to="/training/records/new">
-            <el-icon><EditPen /></el-icon>
-            <span>记录训练</span>
-          </router-link>
         </div>
       </div>
     </div>
@@ -45,6 +39,21 @@
           style="width: 280px"
           @change="fetchList(1)"
         />
+        <el-select
+          v-model="query.userId"
+          placeholder="全部用户"
+          clearable
+          size="default"
+          style="width: 140px"
+          @change="fetchList(1)"
+        >
+          <el-option
+            v-for="u in userOptions"
+            :key="u.value"
+            :label="u.label"
+            :value="u.value"
+          />
+        </el-select>
         <button class="rc-chip-btn" @click="resetFilter">
           <el-icon><Refresh /></el-icon>重置
         </button>
@@ -69,7 +78,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="planName" label="训练内容" min-width="200">
+        <el-table-column prop="planName" label="训练内容" min-width="180">
           <template #default="{ row }">
             <div class="rc-plan">
               <div class="rc-plan__name">
@@ -80,6 +89,14 @@
                 {{ row.note }}
               </div>
             </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="userName" label="用户" width="110">
+          <template #default="{ row }">
+            <span class="rc-user">
+              <el-icon><User /></el-icon>
+              {{ row.userName || '—' }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column label="时长" width="110" align="center">
@@ -202,11 +219,11 @@
                   <th>次数</th>
                   <th>容量 (kg)</th>
                   <th>RPE</th>
-                  <th>间歇</th>
+                  <th style="width:64px">标记</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="s in grp.sets" :key="s.id">
+                <tr v-for="s in grp.sets" :key="s.id" :class="{ 'is-warmup': s.isWarmup }">
                   <td class="is-setno">
                     <span class="rc-setno">{{ s.setNo }}</span>
                   </td>
@@ -220,7 +237,7 @@
                     <span v-else class="rc-muted">—</span>
                   </td>
                   <td>
-                    <span v-if="s.restSeconds">{{ s.restSeconds }}s</span>
+                    <el-tag v-if="s.isWarmup" size="small" type="warning" effect="plain">热身</el-tag>
                     <span v-else class="rc-muted">—</span>
                   </td>
                 </tr>
@@ -237,25 +254,30 @@
 import { reactive, ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
-  EditPen, Refresh, Calendar, Timer, ChatDotRound, Collection
+  Refresh, Calendar, Timer, ChatDotRound, Collection, User
 } from '@element-plus/icons-vue'
 import {
   getRecordList,
-  getRecordDetail
+  getRecordDetail,
+  MOCK_USER_OPTIONS
 } from '@/api/training'
 
 // ===== 列表查询 =====
-const query = reactive({ page: 1, size: 10 })
+const query = reactive({ page: 1, size: 10, userId: '' })
 const dateRange = ref([])
 
 const list    = ref([])
 const total   = ref(0)
 const loading = ref(false)
 
+// 用户筛选选项（来自 mock，真实场景应调用后端）
+const userOptions = MOCK_USER_OPTIONS
+
 async function fetchList(resetPage) {
   if (resetPage) query.page = 1
   loading.value = true
   const params = { ...query }
+  if (!query.userId) delete params.userId
   if (dateRange.value?.length === 2) {
     params.startDate = dateRange.value[0]
     params.endDate   = dateRange.value[1]
@@ -273,6 +295,7 @@ async function fetchList(resetPage) {
 
 function resetFilter() {
   dateRange.value = []
+  query.userId = ''
   fetchList(1)
 }
 
@@ -560,6 +583,21 @@ onMounted(fetchList)
   color: var(--text);
 }
 .rc-num--orange { color: #ff8c69; }
+
+.rc-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.rc-user .el-icon { color: #22d3ee; }
+
+/* 热身组标记 */
+.rc-set-table tr.is-warmup td {
+  background: rgba(245, 158, 11, 0.06);
+  color: var(--text-soft);
+}
 
 .rc-link-btn {
   background: none; border: none;

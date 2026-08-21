@@ -448,8 +448,8 @@ const query = reactive({
   page: 1,
   size: 10,
   name: '',
-  category: '',
-  difficulty: ''
+  category: null,
+  difficulty: null
 })
 
 const list  = ref([])
@@ -458,7 +458,14 @@ const total = ref(0)
 async function fetchList(resetPage) {
   if (resetPage) query.page = 1
   try {
-    const res = await getExerciseList({ ...query })
+    const params = {
+      page: query.page,
+      size: query.size,
+      name: query.name || undefined,
+      category: query.category ?? undefined,
+      difficulty: query.difficulty ?? undefined
+    }
+    const res = await getExerciseList(params)
     list.value  = res.records || []
     total.value = res.total || 0
   } catch (e) {
@@ -485,10 +492,10 @@ const formRef       = ref(null)
 const form = reactive({
   id: '',
   name: '',
-  category: '',
+  category: null,
   difficulty: 1,
   muscleGroup: '',
-  equipment: '',
+  equipment: null,
   description: '',
   imageUrl: ''
 })
@@ -504,10 +511,10 @@ const formRules = {
 function resetForm() {
   form.id = ''
   form.name = ''
-  form.category = ''
+  form.category = null
   form.difficulty = 1
   form.muscleGroup = ''
-  form.equipment = ''
+  form.equipment = null
   form.description = ''
   form.imageUrl = ''
   formRef.value?.clearValidate()
