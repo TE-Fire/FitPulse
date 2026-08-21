@@ -199,79 +199,176 @@
     <el-dialog
       v-model="dialogVisible"
       :title="isEdit ? '编辑动作' : '新建动作'"
-      width="620px"
+      width="640px"
       destroy-on-close
-      top="8vh"
+      top="6vh"
       class="ex-dialog"
     >
+      <!-- 顶部装饰条 -->
+      <div class="ex-dialog__deco">
+        <div class="ex-dialog__deco-bar"></div>
+      </div>
+
       <el-form
         ref="formRef"
         :model="form"
         :rules="formRules"
-        label-width="84px"
-        label-position="right"
+        label-position="top"
+        class="ex-form"
       >
-        <div class="ex-form-grid">
-          <el-form-item label="动作名称" prop="name">
-            <el-input v-model="form.name" placeholder="请输入动作名称（1-50字）" maxlength="50" show-word-limit />
-          </el-form-item>
-          <el-form-item label="分类" prop="category">
-            <el-select v-model="form.category" placeholder="选择分类" style="width: 100%">
-              <el-option
-                v-for="c in CATEGORY_OPTIONS"
-                :key="c.value"
-                :label="c.label"
-                :value="c.value"
-              >
-                <div class="ex-opt">
-                  <span class="ex-opt__dot" :style="{ background: c.color }"></span>
-                  {{ c.label }}
+        <!-- 分组：基本信息 -->
+        <div class="ex-form-section">
+          <div class="ex-form-section__title">
+            <span class="ex-form-section__bar"></span>
+            <span class="ex-form-section__text">基本信息</span>
+          </div>
+          <div class="ex-form-section__body">
+            <div class="ex-form-row">
+              <el-form-item label="动作名称" prop="name" class="ex-form-item--full">
+                <el-input
+                  v-model="form.name"
+                  placeholder="输入一个清晰的动作名称"
+                  maxlength="50"
+                  show-word-limit
+                  class="ex-input"
+                >
+                  <template #prefix>
+                    <el-icon class="ex-input__icon"><Edit /></el-icon>
+                  </template>
+                </el-input>
+              </el-form-item>
+            </div>
+            <div class="ex-form-row ex-form-row--2col">
+              <el-form-item label="动作分类" prop="category">
+                <el-select
+                  v-model="form.category"
+                  placeholder="选择动作分类"
+                  style="width: 100%"
+                  class="ex-select"
+                >
+                  <el-option
+                    v-for="c in CATEGORY_OPTIONS"
+                    :key="c.value"
+                    :label="c.label"
+                    :value="c.value"
+                  >
+                    <div class="ex-opt">
+                      <span class="ex-opt__dot" :style="{ background: c.color }"></span>
+                      {{ c.label }}
+                    </div>
+                  </el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="器械" prop="equipment">
+                <el-select
+                  v-model="form.equipment"
+                  placeholder="选择器械（可选）"
+                  clearable
+                  style="width: 100%"
+                  class="ex-select"
+                >
+                  <el-option
+                    v-for="e in EQUIPMENT_OPTIONS"
+                    :key="e.value"
+                    :label="e.label"
+                    :value="e.value"
+                  />
+                </el-select>
+              </el-form-item>
+            </div>
+          </div>
+        </div>
+
+        <!-- 分组：难度与目标 -->
+        <div class="ex-form-section">
+          <div class="ex-form-section__title">
+            <span class="ex-form-section__bar"></span>
+            <span class="ex-form-section__text">难度与目标</span>
+          </div>
+          <div class="ex-form-section__body">
+            <el-form-item label="难度等级" prop="difficulty">
+              <div class="ex-difficulty-picker">
+                <div
+                  v-for="d in DIFFICULTY_OPTIONS"
+                  :key="d.value"
+                  class="ex-diff-option"
+                  :class="{ 'is-active': form.difficulty === d.value }"
+                  :style="{
+                    '--diff-color': d.color,
+                    '--diff-bg': d.color + '15'
+                  }"
+                  @click="form.difficulty = d.value"
+                >
+                  <span class="ex-diff-option__stars">
+                    <span
+                      v-for="i in 3"
+                      :key="i"
+                      class="ex-diff-option__star"
+                      :class="{ 'is-on': i <= d.value }"
+                    >★</span>
+                  </span>
+                  <span class="ex-diff-option__label">{{ d.label }}</span>
                 </div>
-              </el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="难度" prop="difficulty">
-            <el-segmented
-              v-model="form.difficulty"
-              :options="DIFFICULTY_OPTIONS.map(d => ({
-                value: d.value,
-                label: `${'★'.repeat(d.value)} ${d.label}`
-              }))"
-            />
-          </el-form-item>
-          <el-form-item label="器械" prop="equipment">
-            <el-select v-model="form.equipment" placeholder="选择器械（选填）" clearable style="width: 100%">
-              <el-option
-                v-for="e in EQUIPMENT_OPTIONS"
-                :key="e.value"
-                :label="e.label"
-                :value="e.value"
+              </div>
+            </el-form-item>
+            <el-form-item label="目标肌群" prop="muscleGroup">
+              <el-input
+                v-model="form.muscleGroup"
+                placeholder="例：胸大肌、肱三头肌、股四头肌"
+                maxlength="80"
+                class="ex-input"
+              >
+                <template #prefix>
+                  <el-icon class="ex-input__icon"><Aim /></el-icon>
+                </template>
+              </el-input>
+            </el-form-item>
+          </div>
+        </div>
+
+        <!-- 分组：详细信息 -->
+        <div class="ex-form-section">
+          <div class="ex-form-section__title">
+            <span class="ex-form-section__bar"></span>
+            <span class="ex-form-section__text">详细信息</span>
+          </div>
+          <div class="ex-form-section__body">
+            <el-form-item label="动作示意图 URL" prop="imageUrl">
+              <el-input
+                v-model="form.imageUrl"
+                placeholder="https://...（可选）"
+                class="ex-input"
+              >
+                <template #prefix>
+                  <el-icon class="ex-input__icon"><Link /></el-icon>
+                </template>
+              </el-input>
+            </el-form-item>
+            <el-form-item label="动作描述" prop="description">
+              <el-input
+                v-model="form.description"
+                type="textarea"
+                :rows="4"
+                placeholder="详细描述动作要领、发力感觉、注意事项等..."
+                maxlength="400"
+                show-word-limit
+                class="ex-textarea"
               />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="目标肌群" prop="muscleGroup">
-            <el-input v-model="form.muscleGroup" placeholder="例：胸大肌、肱三头肌（选填）" maxlength="80" />
-          </el-form-item>
-          <el-form-item label="图片URL" prop="imageUrl">
-            <el-input v-model="form.imageUrl" placeholder="https://…（选填）" />
-          </el-form-item>
-          <el-form-item label="动作描述" prop="description" class="is-col">
-            <el-input
-              v-model="form.description"
-              type="textarea"
-              :rows="4"
-              placeholder="描述动作要领、发力感觉、注意事项…（选填）"
-              maxlength="400"
-              show-word-limit
-            />
-          </el-form-item>
+            </el-form-item>
+          </div>
         </div>
       </el-form>
+
       <template #footer>
-        <button class="ex-btn" @click="dialogVisible = false">取消</button>
-        <button class="ex-btn ex-btn--primary" @click="submitForm">
-          {{ isEdit ? '保存修改' : '创建动作' }}
-        </button>
+        <div class="ex-dialog__footer">
+          <button class="ex-btn ex-btn--ghost" @click="dialogVisible = false">
+            取消
+          </button>
+          <button class="ex-btn ex-btn--primary" @click="submitForm">
+            <el-icon><Check /></el-icon>
+            {{ isEdit ? '保存修改' : '创建动作' }}
+          </button>
+        </div>
       </template>
     </el-dialog>
 
@@ -333,7 +430,7 @@
 import { reactive, ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Search, Plus
+  Search, Plus, Edit, Aim, Link, Check
 } from '@element-plus/icons-vue'
 import {
   getExerciseList,
@@ -752,28 +849,225 @@ onMounted(fetchList)
 
 /* —— Dialog 表单 —— */
 .ex-dialog :deep(.el-dialog) {
-  border-radius: 18px;
-  box-shadow: 0 30px 60px -20px rgba(10, 37, 64, 0.35);
+  border-radius: 20px;
+  box-shadow: 0 25px 60px -15px rgba(10, 37, 64, 0.4);
   overflow: hidden;
 }
 .ex-dialog :deep(.el-dialog__header) {
-  padding: 18px 24px 14px;
+  padding: 20px 28px 16px;
   border-bottom: 1px solid var(--border);
   margin-right: 0;
+  position: relative;
 }
-.ex-dialog :deep(.el-dialog__body) { padding: 20px 24px 10px; }
+.ex-dialog :deep(.el-dialog__title) {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+.ex-dialog :deep(.el-dialog__body) {
+  padding: 0 28px 24px;
+}
 .ex-dialog :deep(.el-dialog__footer) {
-  padding: 12px 24px 20px;
+  padding: 16px 28px 24px;
   border-top: 1px solid var(--border);
-  display: flex; justify-content: flex-end; gap: 10px;
 }
 
-.ex-form-grid {
+/* 顶部装饰条 */
+.ex-dialog__deco {
+  height: 3px;
+  background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+  margin: 0 0 4px;
+}
+.ex-dialog__deco-bar {
+  height: 100%;
+}
+
+/* 表单容器 */
+.ex-form {
+  padding: 8px 0;
+}
+
+/* 表单分组 */
+.ex-form-section {
+  margin-bottom: 20px;
+}
+.ex-form-section:last-child {
+  margin-bottom: 0;
+}
+.ex-form-section__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border);
+}
+.ex-form-section__bar {
+  width: 4px;
+  height: 16px;
+  background: linear-gradient(180deg, #667eea, #764ba2);
+  border-radius: 2px;
+}
+.ex-form-section__text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.ex-form-section__body {
+  padding: 0 4px;
+}
+
+/* 表单行 */
+.ex-form-row {
+  margin-bottom: 4px;
+}
+.ex-form-row--2col {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px 18px;
+  gap: 16px;
 }
-.ex-form-grid .is-col { grid-column: 1 / -1; }
+
+/* 表单项标签样式 */
+.ex-form :deep(.el-form-item__label) {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-soft);
+  padding-bottom: 4px !important;
+}
+
+/* 输入框样式 */
+.ex-input :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  background: var(--bg-soft);
+  border: 1.5px solid transparent;
+  box-shadow: none !important;
+  transition: all 0.2s ease;
+}
+.ex-input :deep(.el-input__wrapper:hover) {
+  background: var(--bg);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+.ex-input :deep(.el-input__wrapper.is-focus) {
+  background: var(--bg);
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12) !important;
+}
+.ex-input__icon {
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
+/* 选择框样式 */
+.ex-select :deep(.el-select__wrapper) {
+  border-radius: 10px;
+  background: var(--bg-soft);
+  border: 1.5px solid transparent;
+  box-shadow: none !important;
+  transition: all 0.2s ease;
+}
+.ex-select :deep(.el-select__wrapper:hover) {
+  background: var(--bg);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+.ex-select :deep(.el-select__wrapper.is-focused) {
+  background: var(--bg);
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12) !important;
+}
+
+/* 文本域样式 */
+.ex-textarea :deep(.el-textarea__wrapper) {
+  border-radius: 12px;
+  background: var(--bg-soft);
+  border: 1.5px solid transparent;
+  box-shadow: none !important;
+  transition: all 0.2s ease;
+  padding: 10px 14px;
+}
+.ex-textarea :deep(.el-textarea__wrapper:hover) {
+  background: var(--bg);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+.ex-textarea :deep(.el-textarea__wrapper.is-focus) {
+  background: var(--bg);
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12) !important;
+}
+
+/* 难度选择器 */
+.ex-difficulty-picker {
+  display: flex;
+  gap: 12px;
+}
+.ex-diff-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px;
+  border-radius: 12px;
+  background: var(--bg-soft);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+.ex-diff-option:hover {
+  background: var(--bg);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+.ex-diff-option.is-active {
+  background: var(--diff-bg);
+  border-color: var(--diff-color);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--diff-color) 20%, transparent);
+}
+.ex-diff-option__stars {
+  display: flex;
+  gap: 2px;
+}
+.ex-diff-option__star {
+  font-size: 16px;
+  color: #e5e7eb;
+  transition: color 0.2s ease;
+}
+.ex-diff-option__star.is-on {
+  color: var(--diff-color);
+}
+.ex-diff-option__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.ex-diff-option.is-active .ex-diff-option__label {
+  color: var(--diff-color);
+}
+
+/* Dialog 底部按钮 */
+.ex-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 按钮样式扩展 */
+.ex-btn--ghost {
+  background: transparent;
+  color: var(--text-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.ex-btn--ghost:hover {
+  background: var(--bg-soft);
+  color: var(--text);
+}
 
 /* —— 详情 Drawer —— */
 .ex-detail { padding: 4px 4px 20px; }
@@ -818,6 +1112,6 @@ onMounted(fetchList)
 
 @media (max-width: 720px) {
   .ex-hero__stats { grid-template-columns: repeat(2, 1fr); width: 100%; }
-  .ex-form-grid { grid-template-columns: 1fr; }
+  .ex-form-row--2col { grid-template-columns: 1fr; }
 }
 </style>
