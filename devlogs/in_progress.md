@@ -440,3 +440,64 @@ total_reps   = Σ(set.reps)                    // 例如 8 + 8 = 16
 | RECORD_NOT_FOUND | 404 | 训练记录不存在 |
 | RECORD_SET_EMPTY | 400 | 训练记录至少包含 1 组 |
 | EXERCISE_IN_USE | 409 | 动作被计划/记录引用，不可删除 |
+
+---
+
+## 五、前端实现进度（2026-08-21）
+
+### 5.1 技术栈
+- Vue 3 + Vite + Element Plus + Pinia + Vue Router + Axios + Tailwind CSS
+- ECharts（数据看板图表）
+
+### 5.2 已完成页面
+
+| 页面 | 路由 | 说明 | 状态 |
+|---|---|---|---|
+| 动作库管理 | `/training/exercises` | 列表+筛选+新增/编辑 Dialog | ✅ 完成 |
+| 训练计划列表 | `/training/plans` | 卡片列表+查看/编辑/删除 | ✅ 完成 |
+| 训练计划编辑 | `/training/plans/edit/:id?` | 左右分栏：动作选择器+编排编辑 | ✅ 完成 |
+| 训练记录列表 | `/training/records` | 列表+日期筛选+详情 Drawer | ✅ 完成 |
+| 训练记录录入 | `/training/records/create` | 选计划/自由动作+分组录入 | ✅ 完成 |
+
+### 5.3 Mock 数据
+- **文件**：`src/mock/training.js`
+- **内容**：1380 行静态数据，包含枚举常量、系统预置动作（约 15 个）、训练计划示例、训练记录示例
+- **CRUD 模拟**：所有增删改查操作通过 Promise 模拟异步返回
+
+### 5.4 API 层
+- **文件**：`src/api/training.js`（440 行）
+- **模式**：`FORCE_MOCK=true`，当前强制走前端 Mock
+- **切换后端**：设置 `FORCE_MOCK=false` 即可切换到真实后端接口
+
+### 5.5 UI 设计风格
+- **整体风格**：极简清新健康风 + 数据看板风
+- **配色**：浅色背景、白卡、紫青品牌色点缀（#667eea、#764ba2）
+- **特点**：
+  - Hero 区域展示统计数据渐变背景
+  - 卡片式布局，圆角 16-20px
+  - Dialog 表单分组设计，带装饰性色条
+  - 自定义难度选择器（卡片式）
+  - 输入框聚焦时带阴影环效果
+
+### 5.6 构建验证
+- `npm run build` ✅ 成功
+- 输出产物：约 30 个 chunk，总 JS 约 400KB (gzip)
+
+### 5.7 Git 提交记录
+```
+feat: training module prototype with mock data
+- 5 个页面组件
+- API 层 + Mock 数据
+- 路由配置 + 菜单入口
+refactor: redesign exercise form dialog with grouped card layout
+- 分组卡片式表单布局
+- 自定义难度选择器
+- 统一输入框/按钮样式
+```
+
+### 5.8 后端对接说明
+当前训练模块使用前端 Mock 数据作为原型，后端接口完成后：
+
+1. 修改 `src/api/training.js` 中 `FORCE_MOCK=false`
+2. 前端页面无需改动，API 层会自动切换到真实接口
+3. 接口路径已按后端规范预定义（`/api/v1/training/exercises` 等）
