@@ -35,6 +35,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -183,6 +184,10 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long userId, Long id) {
         WorkoutPlan plan = getPlanOwnedByUser(userId, id);
+
+        if (Objects.isNull(plan)) {
+            throw new BusinessException(TrainingErrorCode.PLAN_NOT_FOUND);
+        }
 
         // 物理删除关联动作（workout_plan_exercise 无逻辑删除字段）
         workoutPlanExerciseMapper.delete(
