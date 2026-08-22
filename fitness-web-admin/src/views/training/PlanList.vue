@@ -58,20 +58,6 @@
         <el-option label="混合" :value="3" />
       </el-select>
 
-      <el-select
-        v-model="query.userId"
-        placeholder="用户"
-        clearable
-        class="pl-filter__select"
-      >
-        <el-option
-          v-for="u in userOptions"
-          :key="u.value"
-          :label="u.label"
-          :value="u.value"
-        />
-      </el-select>
-
       <button class="pl-btn pl-btn--ghost" @click="resetFilter">
         <el-icon><RefreshLeft /></el-icon>
         <span>重置</span>
@@ -267,7 +253,6 @@ import {
   deletePlan,
   PLAN_STATUS,
   PLAN_STATUS_TEXT,
-  MOCK_USER_OPTIONS,
   PLAN_TYPE_OPTIONS
 } from '@/api/training'
 
@@ -277,8 +262,7 @@ const query = reactive({
   size: 8,
   keyword: '',
   status: null,
-  planType: null,
-  userId: null
+  planType: null
 })
 const list = ref([])
 const total = ref(0)
@@ -294,7 +278,6 @@ async function fetchList(resetPage) {
     }
     if (query.status !== null) params.status = query.status
     if (query.planType !== null) params.planType = query.planType
-    if (query.userId !== null) params.userId = query.userId
     if (query.keyword) params.keyword = query.keyword
 
     const res = await getPlanList(params)
@@ -311,7 +294,6 @@ function resetFilter() {
   query.keyword = ''
   query.status = null
   query.planType = null
-  query.userId = null
   fetchList(true)
 }
 
@@ -337,10 +319,7 @@ const stats = computed(() => {
   return s
 })
 
-// 用户选项（mock 数据）
-const userOptions = MOCK_USER_OPTIONS
-
-// 计划类型选项（mock 数据）
+// 计划类型选项
 const planTypeOptions = PLAN_TYPE_OPTIONS
 
 // ====== 格式化 ======

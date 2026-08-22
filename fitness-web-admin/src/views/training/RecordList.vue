@@ -39,21 +39,6 @@
           style="width: 280px"
           @change="fetchList(1)"
         />
-        <el-select
-          v-model="query.userId"
-          placeholder="全部用户"
-          clearable
-          size="default"
-          style="width: 140px"
-          @change="fetchList(1)"
-        >
-          <el-option
-            v-for="u in userOptions"
-            :key="u.value"
-            :label="u.label"
-            :value="u.value"
-          />
-        </el-select>
         <button class="rc-chip-btn" @click="resetFilter">
           <el-icon><Refresh /></el-icon>重置
         </button>
@@ -258,26 +243,21 @@ import {
 } from '@element-plus/icons-vue'
 import {
   getRecordList,
-  getRecordDetail,
-  MOCK_USER_OPTIONS
+  getRecordDetail
 } from '@/api/training'
 
 // ===== 列表查询 =====
-const query = reactive({ page: 1, size: 10, userId: '' })
+const query = reactive({ page: 1, size: 10 })
 const dateRange = ref([])
 
 const list    = ref([])
 const total   = ref(0)
 const loading = ref(false)
 
-// 用户筛选选项（来自 mock，真实场景应调用后端）
-const userOptions = MOCK_USER_OPTIONS
-
 async function fetchList(resetPage) {
   if (resetPage) query.page = 1
   loading.value = true
-  const params = { ...query }
-  if (!query.userId) delete params.userId
+  const params = { page: query.page, size: query.size }
   if (dateRange.value?.length === 2) {
     params.startDate = dateRange.value[0]
     params.endDate   = dateRange.value[1]
@@ -295,7 +275,6 @@ async function fetchList(resetPage) {
 
 function resetFilter() {
   dateRange.value = []
-  query.userId = ''
   fetchList(1)
 }
 
