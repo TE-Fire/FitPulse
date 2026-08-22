@@ -98,10 +98,7 @@
           <p class="pl-card__desc">
             {{ plan.description || '暂无描述' }}
           </p>
-          <div v-if="plan.userName" class="pl-card__user">
-            <el-icon><User /></el-icon>
-            <span>{{ plan.userName }}</span>
-          </div>
+
         </div>
         <div class="pl-card__footer">
           <span class="pl-card__date">
@@ -170,10 +167,7 @@
       <template v-if="detail">
         <div class="pl-detail">
           <div class="pl-detail__meta">
-            <div class="pl-detail__meta-row">
-              <span>所属用户</span>
-              <strong>{{ detail.userName || '—' }}</strong>
-            </div>
+
             <div class="pl-detail__meta-row">
               <span>动作数量</span>
               <strong>{{ detail.exercises?.length || 0 }} 个</strong>
@@ -246,7 +240,7 @@
 <script setup>
 import { reactive, ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, MoreFilled, Delete, Clock, User, RefreshLeft } from '@element-plus/icons-vue'
+import { Search, MoreFilled, Delete, Clock, RefreshLeft } from '@element-plus/icons-vue'
 import {
   getPlanList,
   getPlanDetail,
@@ -609,21 +603,6 @@ onMounted(fetchList)
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
-.pl-card__user {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #667eea;
-  background: #f0f5ff;
-  padding: 3px 8px;
-  border-radius: 6px;
-}
-.pl-card__user .el-icon {
-  font-size: 12px;
-}
-
 .pl-card__footer {
   display: flex;
   align-items: center;

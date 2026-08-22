@@ -76,14 +76,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="userName" label="用户" width="110">
-          <template #default="{ row }">
-            <span class="rc-user">
-              <el-icon><User /></el-icon>
-              {{ row.userName || '—' }}
-            </span>
-          </template>
-        </el-table-column>
+
         <el-table-column label="时长" width="110" align="center">
           <template #default="{ row }">
             <span class="rc-chip rc-chip--blue">
@@ -239,7 +232,7 @@
 import { reactive, ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
-  Refresh, Calendar, Timer, ChatDotRound, Collection, User
+  Refresh, Calendar, Timer, ChatDotRound, Collection
 } from '@element-plus/icons-vue'
 import {
   getRecordList,
@@ -562,16 +555,6 @@ onMounted(fetchList)
   color: var(--text);
 }
 .rc-num--orange { color: #ff8c69; }
-
-.rc-user {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  color: var(--text-soft);
-}
-.rc-user .el-icon { color: #22d3ee; }
-
 /* 热身组标记 */
 .rc-set-table tr.is-warmup td {
   background: rgba(245, 158, 11, 0.06);
