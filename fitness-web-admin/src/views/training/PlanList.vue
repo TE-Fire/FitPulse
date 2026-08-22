@@ -281,7 +281,7 @@ async function fetchList(resetPage) {
     if (query.keyword) params.keyword = query.keyword
 
     const res = await getPlanList(params)
-    list.value = res.records || []
+    list.value = res.list || []
     total.value = res.total || 0
   } catch (e) {
     ElMessage.error(e?.message || '加载失败')

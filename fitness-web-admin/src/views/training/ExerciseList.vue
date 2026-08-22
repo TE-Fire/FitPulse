@@ -466,7 +466,7 @@ async function fetchList(resetPage) {
       difficulty: query.difficulty ?? undefined
     }
     const res = await getExerciseList(params)
-    list.value  = res.records || []
+    list.value  = res.list || []
     total.value = res.total || 0
   } catch (e) {
     ElMessage.error(e?.message || '加载失败')

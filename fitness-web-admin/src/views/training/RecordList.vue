@@ -264,7 +264,7 @@ async function fetchList(resetPage) {
   }
   try {
     const res = await getRecordList(params)
-    list.value  = res.records || []
+    list.value  = res.list || []
     total.value = res.total || 0
   } catch (e) {
     ElMessage.error(e?.message || '加载失败')

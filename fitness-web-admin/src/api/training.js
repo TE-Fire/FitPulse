@@ -40,7 +40,7 @@ export function deleteExercise(id) {
 /** 辅助：获取全部动作（不分页，用于下拉选择器） */
 export function getAllExercises() {
   return request.get('/api/v1/training/exercises', { params: { size: 500 } })
-    .then(r => r.records || [])
+    .then(r => r.list || [])
 }
 
 /* ==================== 训练计划 WorkoutPlan（只读） ==================== */
@@ -63,7 +63,7 @@ export function deletePlan(id) {
 /** 辅助：获取全部计划（不分页，用于下拉筛选） */
 export function getAllPlans() {
   return request.get('/api/v1/training/plans', { params: { size: 500 } })
-    .then(r => r.records || [])
+    .then(r => r.list || [])
 }
 
 /* ==================== 训练记录 WorkoutRecord（只读） ==================== */
